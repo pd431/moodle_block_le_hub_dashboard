@@ -15,6 +15,7 @@ Feature: A collapsed row is one line of aligned columns, and opens for the detai
   @javascript
   Scenario: A collapsed row is one line of aligned columns under one column header
     When I log in as "hub1" and view the "Hub dashboard"
+    And the page is shown at its full width
     Then the row columns should be "Assessment, Module, Reason, Status, Progress, Flags"
     And the "Module" column of every collapsed row should start at the same x position
     And the collapsed row "Problem sheet 4" should show "Problem sheet 4", "MTH2003"
@@ -28,13 +29,32 @@ Feature: A collapsed row is one line of aligned columns, and opens for the detai
     And the collapsed row "Problem sheet 5" should show the status "0 of 2 submitted, due in 6 days"
 
   @javascript
-  Scenario: Collapsed-row flags are icons with counts, and the words are in the popover
-    Given the submission of "student1" for "Problem sheet 4" is flagged for an academic conduct check
-    And "student1" has an extension on "Problem sheet 4" to "in 3 days"
+  Scenario: At the Dashboard's width the status and progress drop under the name and the column header goes
     When I log in as "hub1" and view the "Hub dashboard"
-    Then the collapsed row "Problem sheet 4" should show the icon flags "1 flagged, 1 individual deadline, No allocation"
-    And the collapsed row "Problem sheet 4" should not show the text "flagged"
-    When I click on the "1 flagged" flag of "Problem sheet 4"
+    Then the column header should not be shown
+    And the collapsed row "Problem sheet 4" should show "Problem sheet 4", "MTH2003"
+    And the collapsed row "Problem sheet 4" should show the status "1 unmarked, 2 days past the marking deadline"
+    And the "Module" column of every collapsed row should start at the same x position
+    And the collapsed row "Problem sheet 4" should be at most "80" pixels tall
+
+  @javascript
+  Scenario: Collapsed-row flags are icons with counts, and the words are in the popover
+    Given "student1" has an extension on "Problem sheet 4" to "in 3 days"
+    When I log in as "hub1" and view the "Hub dashboard"
+    Then the collapsed row "Problem sheet 4" should show the icon flags "1 individual deadline, No allocation"
+    And the collapsed row "Problem sheet 4" should not show the text "individual deadline"
+    When I click on the "1 individual deadline" flag of "Problem sheet 4"
+    Then I should see "Students whose own deadline differs from the default"
+
+  @javascript
+  Scenario: An academic conduct flag is a coursework's, and its words are in the popover too
+    Given a summative "coursework" "Lab report" in "BIO1" was due "10 days ago" with marking due "in 10 days"
+    And "student1" has submitted "Lab report"
+    And the submission of "student1" for "Lab report" is flagged for an academic conduct check
+    When I log in as "hub1" and view the "Hub dashboard"
+    Then the collapsed row "Lab report" should show the icon flags "1 flagged, No allocation"
+    And the collapsed row "Lab report" should not show the text "flagged"
+    When I click on the "1 flagged" flag of "Lab report"
     Then I should see "1 under investigation for academic conduct"
 
   @javascript

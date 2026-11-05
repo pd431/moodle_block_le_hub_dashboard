@@ -56,9 +56,11 @@ class behat_block_le_hub_dashboard extends behat_base {
         }
     }
 
-    // --- Fixtures ---------------------------------------------------------------------------------------
+    // Fixtures.
 
     /**
+     * The hub fixtures from hub-view.feature exist.
+     *
      * @Given /^the hub fixtures from hub-view\.feature exist$/
      */
     public function hub_fixtures_exist(): void {
@@ -66,6 +68,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The "<role>" role has the "<capability>" capability.
+     *
      * @Given /^the "(?P<role>[^"]*)" role has the "(?P<capability>[^"]*)" capability$/
      * @param string $role
      * @param string $capability
@@ -75,6 +79,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * "<user>" has the "<role>" role at system level.
+     *
      * @Given /^"(?P<user>[^"]*)" has the "(?P<role>[^"]*)" role at system level$/
      * @param string $username
      * @param string $role
@@ -84,6 +90,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * "<user>" has the "<role>" role in category "<category>".
+     *
      * @Given /^"(?P<user>[^"]*)" has the "(?P<role>[^"]*)" role in category "(?P<category>[^"]*)"$/
      * @param string $username
      * @param string $role
@@ -94,6 +102,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The "Hub dashboard" block is on the default Dashboard.
+     *
      * @Given /^the "Hub dashboard" block is on the default Dashboard$/
      */
     public function block_on_dashboard(): void {
@@ -101,6 +111,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * "<user>" picked the hub categories "<paths>".
+     *
      * @Given /^"(?P<user>[^"]*)" picked the hub categories "(?P<paths>[^"]*)"$/
      * @param string $username
      * @param string $paths
@@ -110,6 +122,9 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * "<user>" has the hub view "<name>" with module codes starting with "<first>" or "<second>".
+     *
+      * @phpcs:ignore moodle.Files.LineLength.TooLong, moodle.Files.LineLength.MaxExceeded
      * @Given /^"(?P<user>[^"]*)" has the hub view "(?P<name>[^"]*)" with module codes starting with "(?P<first>[^"]*)" or "(?P<second>[^"]*)"$/
      * @param string $username
      * @param string $name
@@ -121,6 +136,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * "<user>" added the module "<code>" to the hub view "<name>".
+     *
      * @Given /^"(?P<user>[^"]*)" added the module "(?P<code>[^"]*)" to the hub view "(?P<name>[^"]*)"$/
      * @param string $username
      * @param string $code
@@ -131,6 +148,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * "<user>" has the hub views "<first>" and "<second>", and last used "<last>".
+     *
      * @Given /^"(?P<user>[^"]*)" has the hub views "(?P<first>[^"]*)" and "(?P<second>[^"]*)", and last used "(?P<last>[^"]*)"$/
      * @param string $username
      * @param string $first
@@ -142,6 +161,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * "<user>" last chose "<type>" in the Hub dashboard.
+     *
      * @Given /^"(?P<user>[^"]*)" last chose "(?P<type>[^"]*)" in the Hub dashboard$/
      * @param string $username
      * @param string $type
@@ -151,6 +172,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * "<user>" added the hub note "<text>" to "<name>"<escalation>.
+     *
      * @Given /^"(?P<user>[^"]*)" added the hub note "(?P<text>[^"]*)" to "(?P<name>[^"]*)"(?P<escalation> as an escalation)?$/
      * @param string $username
      * @param string $text
@@ -162,6 +185,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * "<user>" ignored the assessment "<name>" in the hub view "<view>".
+     *
      * @Given /^"(?P<user>[^"]*)" ignored the assessment "(?P<name>[^"]*)" in the hub view "(?P<view>[^"]*)"$/
      * @param string $username
      * @param string $name
@@ -172,6 +197,9 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * An <tag> "<mod>" "<name>" in "<course>"<opts> is due "<due>" with marking due "<markingdue>".
+     *
+      * @phpcs:ignore moodle.Files.LineLength.TooLong, moodle.Files.LineLength.MaxExceeded
      * @Given /^an? (?P<tag>summative|formative) "(?P<mod>\w+)" "(?P<name>[^"]*)" in "(?P<course>[^"]*)"(?P<opts>.*?) (?:is|was) due "(?P<due>[^"]*)" with marking due "(?P<markingdue>[^"]*)"$/
      * @param string $tag
      * @param string $modname
@@ -181,12 +209,22 @@ class behat_block_le_hub_dashboard extends behat_base {
      * @param string $due
      * @param string $markingdue
      */
-    public function assessment_with_marking_due(string $tag, string $modname, string $name, string $course, string $opts,
-            string $due, string $markingdue): void {
+    public function assessment_with_marking_due(
+        string $tag,
+        string $modname,
+        string $name,
+        string $course,
+        string $opts,
+        string $due,
+        string $markingdue
+    ): void {
         self::write('assessment_with_marking_due', [$tag, $modname, $name, $course, $opts, $due, $markingdue]);
     }
 
     /**
+     * <n> summative assessments in "<course>" were due "<due>" with marking due "<markingdue>".
+     *
+      * @phpcs:ignore moodle.Files.LineLength.TooLong, moodle.Files.LineLength.MaxExceeded
      * @Given /^(?P<n>\d+) summative assessments in "(?P<course>[^"]*)" were due "(?P<due>[^"]*)" with marking due "(?P<markingdue>[^"]*)"$/
      * @param string $count
      * @param string $course
@@ -198,6 +236,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * "<student>" has been marked on "<name>".
+     *
      * @Given /^"(?P<student>[^"]*)" has been marked on "(?P<name>[^"]*)"$/
      * @param string $student
      * @param string $name
@@ -207,6 +247,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * Both submissions of "<name>" have been marked<sent>.
+     *
      * @Given /^both submissions of "(?P<name>[^"]*)" have been marked(?P<sent> and sent to hub)?$/
      * @param string $name
      * @param string $sent
@@ -216,6 +258,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * Both submissions of "<name>" have been released.
+     *
      * @Given /^both submissions of "(?P<name>[^"]*)" have been released$/
      * @param string $name
      */
@@ -224,6 +268,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * "<student>" has been marked and marks for "<name>" were sent to hub.
+     *
      * @Given /^"(?P<student>[^"]*)" has been marked and marks for "(?P<name>[^"]*)" were sent to hub$/
      * @param string $student
      * @param string $name
@@ -233,6 +279,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * Both marked, sent to hub, then the mark of "<student>" is changed.
+     *
      * @Given /^both marked, sent to hub, then the mark of "(?P<student>[^"]*)" is changed$/
      * @param string $student
      */
@@ -241,6 +289,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * Both released, then the mark of "<student>" is changed.
+     *
      * @Given /^both released, then the mark of "(?P<student>[^"]*)" is changed$/
      * @param string $student
      */
@@ -249,6 +299,9 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * "<student>" and "<second>" is allocated to "<marker>" on "<name>".
+     *
+      * @phpcs:ignore moodle.Files.LineLength.TooLong, moodle.Files.LineLength.MaxExceeded
      * @Given /^"(?P<student>[^"]*)"(?: and "(?P<second>[^"]*)")? (?:is|are) allocated to "(?P<marker>[^"]*)"(?: on "(?P<name>[^"]*)")?$/
      * @param string $student
      * @param string $second
@@ -260,6 +313,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * Marks for "<name>" were sent to hub for "<student>" only.
+     *
      * @Given /^marks for "(?P<name>[^"]*)" were sent to hub(?: for "(?P<student>[^"]*)" only)?$/
      * @param string $name
      * @param string $student
@@ -269,6 +324,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The mark of "<student>" for "<name>" is changed.
+     *
      * @Given /^the mark of "(?P<student>[^"]*)" for "(?P<name>[^"]*)" is changed$/
      * @param string $student
      * @param string $name
@@ -278,6 +335,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * "<student>" is exempt from "<name>".
+     *
      * @Given /^"(?P<student>[^"]*)" is exempt from "(?P<name>[^"]*)"$/
      * @param string $student
      * @param string $name
@@ -287,6 +346,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The results of "<student>" for "<name>" are withheld after an academic conduct check.
+     *
      * @Given /^the results of "(?P<student>[^"]*)" for "(?P<name>[^"]*)" are withheld after an academic conduct check$/
      * @param string $student
      * @param string $name
@@ -296,6 +357,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The submission of "<student>" for "<name>" is flagged for an academic conduct check.
+     *
      * @Given /^the submission of "(?P<student>[^"]*)" for "(?P<name>[^"]*)" is flagged for an academic conduct check$/
      * @param string $student
      * @param string $name
@@ -304,7 +367,21 @@ class behat_block_le_hub_dashboard extends behat_base {
         self::write('flagged_for_conduct', [$student, $name]);
     }
 
-    // --- Reading the page -------------------------------------------------------------------------------
+    // Reading the page.
+
+    /**
+     * The text content of every element a selector matches, as the page holds it (not as the browser shows it).
+     *
+     * @param string $selector A CSS selector.
+     * @return string[]
+     */
+    protected function texts(string $selector): array {
+        if (!$this->running_javascript()) {
+            return array_map(fn($n) => $n->getText(), $this->find_all('css', $selector));
+        }
+        return $this->getSession()->evaluateScript("(function () { return Array.from(document.querySelectorAll("
+            . json_encode($selector) . ")).map(function (el) { return el.textContent; }); })()");
+    }
 
     /**
      * A hub row by name.
@@ -328,6 +405,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I log in as "<user>" and pick the hub categories "<paths>".
+     *
      * @Given /^I log in as "(?P<user>[^"]*)" and pick the hub categories "(?P<paths>[^"]*)"$/
      * @param string $username
      * @param string $paths
@@ -338,6 +417,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I should <not>see "<text>" in the "Hub dashboard" block.
+     *
      * @Then /^I should (?P<not>not )?see "(?P<text>[^"]*)" in the "Hub dashboard" block$/
      * @param string $not
      * @param string $text
@@ -348,6 +429,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * "<name>" should be in the "<group>" group with the reason "<reason>".
+     *
      * @Then /^"(?P<name>[^"]*)" should be in the "(?P<group>[^"]*)" group(?: with the reason "(?P<reason>[^"]*)")?$/
      * @param string $name
      * @param string $group
@@ -365,13 +448,17 @@ class behat_block_le_hub_dashboard extends behat_base {
         if ($reason !== '') {
             $tag = $row->find('xpath', ".//*[contains(@class, 'hub-reason')][1]");
             if (!$tag || trim($tag->getText()) !== $reason) {
-                throw new ExpectationException("'$name' leads with '" . ($tag ? $tag->getText() : '') . "', not '$reason'",
-                    $this->getSession());
+                throw new ExpectationException(
+                    "'$name' leads with '" . ($tag ? $tag->getText() : '') . "', not '$reason'",
+                    $this->getSession()
+                );
             }
         }
     }
 
     /**
+     * "<name>" should show the reason tag "<reason>".
+     *
      * @Then /^"(?P<name>[^"]*)" should show the reason tag "(?P<reason>[^"]*)"$/
      * @param string $name
      * @param string $reason
@@ -381,6 +468,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The collapsed row "<name>" should show the reason tag "<reason>".
+     *
      * @Then /^the collapsed row "(?P<name>[^"]*)" should show the reason tag "(?P<reason>[^"]*)"$/
      * @param string $name
      * @param string $reason
@@ -395,6 +484,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The collapsed row "<name>" should show the status "<status>".
+     *
      * @Then /^the collapsed row "(?P<name>[^"]*)" should show the status "(?P<status>[^"]*)"$/
      * @param string $name
      * @param string $status
@@ -402,12 +493,16 @@ class behat_block_le_hub_dashboard extends behat_base {
     public function collapsed_row_should_show_status(string $name, string $status): void {
         $node = $this->row($name)->find('xpath', ".//*[@data-region='hub-row-status']");
         if (!$node || trim(preg_replace('/\s+/', ' ', $node->getText())) !== $status) {
-            throw new ExpectationException("'$name' shows '" . ($node ? $node->getText() : '') . "', not '$status'",
-                $this->getSession());
+            throw new ExpectationException(
+                "'$name' shows '" . ($node ? $node->getText() : '') . "', not '$status'",
+                $this->getSession()
+            );
         }
     }
 
     /**
+     * The collapsed row "<name>" should <not>show <texts>.
+     *
      * @Then /^the collapsed row "(?P<name>[^"]*)" should (?P<not>not )?show (?P<texts>"[^"]*"(?:, "[^"]*")*)$/
      * @param string $name
      * @param string $not
@@ -419,13 +514,17 @@ class behat_block_le_hub_dashboard extends behat_base {
         preg_match_all('/"([^"]*)"/', $texts, $m);
         foreach ($m[1] as $text) {
             if (str_contains($shown, $text) === (bool)$not) {
-                throw new ExpectationException("The collapsed row '$name' " . ($not ? 'shows' : 'does not show') . " '$text'",
-                    $this->getSession());
+                throw new ExpectationException(
+                    "The collapsed row '$name' " . ($not ? 'shows' : 'does not show') . " '$text'",
+                    $this->getSession()
+                );
             }
         }
     }
 
     /**
+     * The collapsed row "<name>" should not show the text "<text>".
+     *
      * @Then /^the collapsed row "(?P<name>[^"]*)" should not show the text "(?P<text>[^"]*)"$/
      * @param string $name
      * @param string $text
@@ -442,14 +541,20 @@ class behat_block_le_hub_dashboard extends behat_base {
      */
     protected function flag_names(string $name): array {
         $out = [];
-        foreach ($this->row($name)->findAll('xpath',
-            ".//*[@data-region='hub-row-line']//button[@data-action='tip'][@data-hint]") as $flag) {
+        foreach (
+            $this->row($name)->findAll(
+                'xpath',
+                ".//*[@data-region='hub-row-line']//button[@data-action='tip'][@data-hint]"
+            ) as $flag
+        ) {
             $out[] = $flag->getAttribute('aria-label');
         }
         return $out;
     }
 
     /**
+     * The collapsed row "<name>" should show the icon flags "<flags>".
+     *
      * @Then /^the collapsed row "(?P<name>[^"]*)" should show the icon flags "(?P<flags>[^"]*)"$/
      * @param string $name
      * @param string $flags
@@ -459,13 +564,17 @@ class behat_block_le_hub_dashboard extends behat_base {
         $actual = $this->flag_names($name);
         foreach ($expected as $flag) {
             if (!in_array($flag, $actual)) {
-                throw new ExpectationException("'$name' has flags '" . implode(', ', $actual) . "', not '$flag'",
-                    $this->getSession());
+                throw new ExpectationException(
+                    "'$name' has flags '" . implode(', ', $actual) . "', not '$flag'",
+                    $this->getSession()
+                );
             }
         }
     }
 
     /**
+     * The collapsed row "<name>" should show an "<flag>" flag.
+     *
      * @Then /^(?:the collapsed row )?"(?P<name>[^"]*)" should show an? "(?P<flag>[^"]*)" flag$/
      * @param string $name
      * @param string $flag
@@ -475,6 +584,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I click on the "<flag>" flag of "<name>".
+     *
      * @When /^I click on the "(?P<flag>[^"]*)" flag of "(?P<name>[^"]*)"$/
      * @param string $flag
      * @param string $name
@@ -490,6 +601,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The collapsed row "<name>" should show one stacked bar with segments "<segments>".
+     *
      * @Then /^the collapsed row "(?P<name>[^"]*)" should show one stacked bar with segments "(?P<segments>[^"]*)"$/
      * @param string $name
      * @param string $segments
@@ -506,6 +619,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I <how> the row "<name>".
+     *
      * @When /^I (?P<how>expand|collapse) the row "(?P<name>[^"]*)"$/
      * @param string $how
      * @param string $name
@@ -520,6 +635,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I focus the row "<name>" and press "<key>".
+     *
      * @When /^I focus the row "(?P<name>[^"]*)" and press "(?P<key>[^"]*)"$/
      * @param string $name
      * @param string $key
@@ -527,11 +644,13 @@ class behat_block_le_hub_dashboard extends behat_base {
     public function i_focus_the_row_and_press(string $name, string $key): void {
         $toggle = $this->row($name)->find('xpath', ".//button[@data-action='toggle-row']");
         $toggle->focus();
-        $this->getSession()->getDriver()->keyPress($toggle->getXpath(), $key === 'Enter' ? 13 : 32);
+        $this->execute('behat_general::i_press_named_key', ['', $key === 'Enter' ? 'enter' : 'space']);
         $this->wait_for_pending_js();
     }
 
     /**
+     * The expanded row "<name>" should show the set-up "<items>".
+     *
      * @Then /^the expanded row "(?P<name>[^"]*)" should show the set-up "(?P<items>[^"]*)"$/
      * @param string $name
      * @param string $items
@@ -544,6 +663,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The expanded row "<name>" should show the dates "<labels>" in that order.
+     *
      * @Then /^the expanded row "(?P<name>[^"]*)" should show the dates "(?P<labels>[^"]*)" in that order$/
      * @param string $name
      * @param string $labels
@@ -553,8 +674,10 @@ class behat_block_le_hub_dashboard extends behat_base {
         if (!$detail || !$detail->isVisible()) {
             throw new ExpectationException("'$name' is not expanded", $this->getSession());
         }
-        $actual = array_map(fn($n) => trim($n->getText()), $detail->findAll('xpath',
-            ".//*[contains(@class, 'ma-row-date-label')]"));
+        $actual = array_map(fn($n) => trim($n->getText()), $detail->findAll(
+            'xpath',
+            ".//*[contains(@class, 'ma-row-date-label')]"
+        ));
         // In that order, with other dates (a release, an extension) allowed between.
         $at = 0;
         $expected = array_map('trim', explode(',', $labels));
@@ -569,19 +692,25 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The expanded row "<name>" should show the bars "<labels>".
+     *
      * @Then /^the expanded row "(?P<name>[^"]*)" should show the bars "(?P<labels>[^"]*)"$/
      * @param string $name
      * @param string $labels
      */
     public function expanded_row_should_show_bars(string $name, string $labels): void {
-        $actual = array_map(fn($n) => trim($n->getText()),
-            $this->row($name)->findAll('xpath', ".//*[contains(@class, 'hub-detail-bars')]//*[contains(@class, 'ma-bar-label')]"));
+        $actual = array_map(
+            fn($n) => trim($n->getText()),
+            $this->row($name)->findAll('xpath', ".//*[contains(@class, 'hub-detail-bars')]//*[contains(@class, 'ma-bar-label')]")
+        );
         if ($actual !== array_map('trim', explode(',', $labels))) {
             throw new ExpectationException("'$name' bars are '" . implode(', ', $actual) . "'", $this->getSession());
         }
     }
 
     /**
+     * The expanded row "<name>" should list the convenor "<convenor>" linked to their profile.
+     *
      * @Then /^the expanded row "(?P<name>[^"]*)" should list the convenor "(?P<convenor>[^"]*)" linked to their profile$/
      * @param string $name
      * @param string $convenor
@@ -595,6 +724,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The expanded row "<name>" should <not>show "<text>".
+     *
      * @Then /^the expanded row "(?P<name>[^"]*)" should (?P<not>not )?(?:show|offer) "(?P<text>[^"]*)"$/
      * @param string $name
      * @param string $not
@@ -604,12 +735,16 @@ class behat_block_le_hub_dashboard extends behat_base {
         $detail = $this->row($name)->find('xpath', ".//*[@data-region='hub-row-detail']");
         $shown = preg_replace('/\s+/', ' ', $detail->getText());
         if (str_contains($shown, $text) === (bool)$not) {
-            throw new ExpectationException("The expanded row '$name' " . ($not ? 'shows' : 'does not show') . " '$text'",
-                $this->getSession());
+            throw new ExpectationException(
+                "The expanded row '$name' " . ($not ? 'shows' : 'does not show') . " '$text'",
+                $this->getSession()
+            );
         }
     }
 
     /**
+     * The latest hub note on "<name>" should be "<text>" by "<author>" today.
+     *
      * @Then /^the latest hub note on "(?P<name>[^"]*)" should be "(?P<text>[^"]*)" by "(?P<author>[^"]*)" today$/
      * @param string $name
      * @param string $text
@@ -633,12 +768,14 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The groups should be in the order "<labels>".
+     *
      * @Then /^the groups should be in the order "(?P<labels>[^"]*)"$/
      * @param string $labels
      */
     public function groups_in_order(string $labels): void {
-        $actual = array_map(fn($n) => trim($n->getText()),
-            $this->find_all('xpath', "//*[contains(@class, 'block_le_hub_dashboard')]//*[contains(@class, 'hub-group-title')]"));
+        // Every group's title, in order, whether or not the group has rows to show (an empty group is hidden).
+        $actual = array_map('trim', $this->texts(self::BLOCK . ' .hub-group-title'));
         if ($actual !== array_map('trim', explode(',', $labels))) {
             throw new ExpectationException("Groups are '" . implode(', ', $actual) . "'", $this->getSession());
         }
@@ -665,6 +802,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The "<group>" group header should read "<text>".
+     *
      * @Then /^the "(?P<group>[^"]*)" group header should read "(?P<text>[^"]*)"$/
      * @param string $group
      * @param string $text
@@ -677,6 +816,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The status strip should read "<text>".
+     *
      * @Then /^the status strip should read "(?P<text>[^"]*)"$/
      * @param string $text
      */
@@ -694,6 +835,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I click on the reason "<reason>" in the "<group>" group header.
+     *
      * @When /^I click on the reason "(?P<reason>[^"]*)" in the "(?P<group>[^"]*)" group header$/
      * @param string $reason
      * @param string $group
@@ -707,6 +850,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The "<group>" group should list "<names>" in that order.
+     *
      * @Then /^the "(?P<group>[^"]*)" group should list "(?P<names>[^"]*)" in that order$/
      * @param string $group
      * @param string $names
@@ -722,6 +867,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The "<group>" group should be collapsed.
+     *
      * @Then /^the "(?P<group>[^"]*)" group should be collapsed$/
      * @param string $group
      */
@@ -735,6 +882,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I click on the status pill "<group>".
+     *
      * @When /^I click on the status pill "(?P<group>[^"]*)"$/
      * @param string $group
      */
@@ -746,6 +895,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The "<group>" group should be open and in view.
+     *
      * @Then /^the "(?P<group>[^"]*)" group should be open and in view$/
      * @param string $group
      */
@@ -765,6 +916,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I type "<text>" in the hub "Find" box.
+     *
      * @When /^I type "(?P<text>[^"]*)" in the hub "Find" box$/
      * @param string $text
      */
@@ -772,7 +925,9 @@ class behat_block_le_hub_dashboard extends behat_base {
         $box = $this->find('css', self::BLOCK . ' [data-action="find"]');
         $box->focus();
         $box->setValue($text);
-        $this->getSession()->getDriver()->keyUp($box->getXpath(), substr($text, -1));
+        // Typing fires input events in a browser; this makes sure the Find box has seen the whole text.
+        $this->getSession()->executeScript("document.querySelector('" . self::BLOCK
+            . " [data-action=\"find\"]').dispatchEvent(new Event('input', {bubbles: true}))");
         $this->wait_for_pending_js();
         // The Find box waits a moment after typing before asking the server.
         $this->getSession()->wait(1000, "document.querySelector('" . self::BLOCK
@@ -780,6 +935,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The Find suggestions should list "<name>" under "<heading>".
+     *
      * @Then /^the Find suggestions should list "(?P<name>[^"]*)" under "(?P<heading>[^"]*)"$/
      * @param string $name
      * @param string $heading
@@ -797,20 +954,27 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The Find suggestions should offer "<only>" and "<not>".
+     *
      * @Then /^the Find suggestions should offer "(?P<only>[^"]*)" and "(?P<not>[^"]*)"$/
      * @param string $only
      * @param string $not
      */
     public function suggestions_should_offer(string $only, string $not): void {
         foreach ([$only, $not] as $label) {
-            $this->find('xpath', "//*[contains(@class, 'block_le_hub_dashboard')]//*[@data-region='hub-suggest']" .
+            $this->find(
+                'xpath',
+                "//*[contains(@class, 'block_le_hub_dashboard')]//*[@data-region='hub-suggest']" .
                 "//button[@data-action='suggest-word'][starts-with(normalize-space(.), "
                     . behat_context_helper::escape($label) . ')]',
-                new ExpectationException("The Find list does not offer '$label'", $this->getSession()));
+                new ExpectationException("The Find list does not offer '$label'", $this->getSession())
+            );
         }
     }
 
     /**
+     * I choose "<label>" from the Find suggestions.
+     *
      * @When /^I choose "(?P<label>[^"]*)" from the Find suggestions$/
      * @param string $label
      */
@@ -821,6 +985,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I search the hub dashboard for the person "<name>".
+     *
      * @When /^I search the hub dashboard for the person "(?P<name>[^"]*)"$/
      * @param string $name
      */
@@ -830,6 +996,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I add the word filter "<word>" as "<mode>".
+     *
      * @When /^I add the word filter "(?P<word>[^"]*)" as "(?P<mode>Only|Not)"$/
      * @param string $word
      * @param string $mode
@@ -840,6 +1008,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I filter the hub dashboard to exclude "<first>" and "<second>".
+     *
      * @When /^I filter the hub dashboard to exclude "(?P<first>[^"]*)" and "(?P<second>[^"]*)"$/
      * @param string $first
      * @param string $second
@@ -850,6 +1020,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I switch the word chip "<word>" to "<mode>".
+     *
      * @When /^I switch the word (?:chip|filter) "(?P<word>[^"]*)" to "?(?P<mode>Only|Not|only|not)"?$/
      * @param string $word
      * @param string $mode
@@ -862,6 +1034,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I should see the word chip "<text>" in the "Hub dashboard" block.
+     *
      * @Then /^I should see the word chip "(?P<text>[^"]*)" in the "Hub dashboard" block$/
      * @param string $text
      */
@@ -871,6 +1045,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The word chip "<word>" should show the mode "<mode>".
+     *
      * @Then /^the word chip "(?P<word>[^"]*)" should show the mode "(?P<mode>Only|Not)"$/
      * @param string $word
      * @param string $mode
@@ -879,22 +1055,32 @@ class behat_block_le_hub_dashboard extends behat_base {
         $this->find('xpath', "//*[contains(@class, 'block_le_hub_dashboard')]//*[contains(@class, 'hub-chip')][@data-chip=" .
             behat_context_helper::escape(strtolower($word))
                 . "]//button[@data-action='chip-mode'][@aria-pressed='true'][normalize-space(.) = " .
-            behat_context_helper::escape($mode) . ']', new ExpectationException("No '$word' chip in mode '$mode'",
-                $this->getSession()));
+            behat_context_helper::escape($mode) . ']', new ExpectationException(
+                "No '$word' chip in mode '$mode'",
+                $this->getSession()
+            ));
     }
 
     /**
+     * The Filter list should have the groups "<groups>".
+     *
      * @Then /^the Filter list should have the groups "(?P<groups>[^"]*)"$/
      * @param string $groups
      */
     public function filter_list_groups(string $groups): void {
-        $actual = array_map(fn($n) => trim($n->getText()), $this->find_all('css', self::BLOCK . ' .hub-filter-heading'));
-        if ($actual !== array_map('trim', explode(',', $groups))) {
+        // The headings are set in capitals by CSS, which the browser reports; the words are what matter.
+        $actual = array_map(
+            fn($n) => \core_text::strtolower(trim($n->getText())),
+            $this->find_all('css', self::BLOCK . ' .hub-filter-heading')
+        );
+        if ($actual !== array_map(fn($g) => \core_text::strtolower(trim($g)), explode(',', $groups))) {
             throw new ExpectationException("The Filter list has the groups '" . implode(', ', $actual) . "'", $this->getSession());
         }
     }
 
     /**
+     * I tick "<label>" in the Filter list.
+     *
      * @When /^I tick "(?P<label>[^"]*)" in the Filter list$/
      * @param string $label
      */
@@ -905,6 +1091,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I filter the hub dashboard to only those with "<label>".
+     *
      * @When /^I filter the hub dashboard to only those with "(?P<label>[^"]*)"$/
      * @param string $label
      */
@@ -914,6 +1102,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * "<label>" should be ticked under "<group>" in the Filter list.
+     *
      * @Then /^"(?P<label>[^"]*)" should be ticked under "(?P<group>[^"]*)" in the Filter list$/
      * @param string $label
      * @param string $group
@@ -928,6 +1118,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I should see the filter chip "<label>".
+     *
      * @Then /^I should see the filter chip "(?P<label>[^"]*)"$/
      * @param string $label
      */
@@ -937,6 +1129,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I remove the filter chip "<label>".
+     *
      * @When /^I remove the filter chip "(?P<label>[^"]*)"$/
      * @param string $label
      */
@@ -947,6 +1141,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The "Hub dashboard" controls should be "<names>".
+     *
      * @Then /^the "Hub dashboard" controls should be "(?P<names>[^"]*)"$/
      * @param string $names
      */
@@ -968,18 +1164,46 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * Lets the page use the whole window: Boost caps the Dashboard's content at 830px (body.limitedwidth), which
+     * is narrower than the one-line row needs (P5), so this shows the layout a wider page gets.
+     *
+     * @Given /^the page is shown at its full width$/
+     */
+    public function page_at_full_width(): void {
+        if ($this->running_javascript()) {
+            $this->getSession()->executeScript("document.body.classList.remove('limitedwidth')");
+            $this->wait_for_pending_js();
+        }
+    }
+
+    /**
+     * The column header should not be shown.
+     *
+     * @Then /^the column header should not be shown$/
+     */
+    public function column_header_not_shown(): void {
+        $head = $this->find('css', self::BLOCK . ' .hub-colhead');
+        if ($this->running_javascript() && $head->isVisible()) {
+            throw new ExpectationException('The column header is shown', $this->getSession());
+        }
+    }
+
+    /**
+     * The row columns should be "<names>".
+     *
      * @Then /^the row columns should be "(?P<names>[^"]*)"$/
      * @param string $names
      */
     public function row_columns_should_be(string $names): void {
-        $actual = array_values(array_filter(array_map(fn($n) => trim($n->getText()),
-            $this->find_all('css', self::BLOCK . ' .hub-colhead > .hub-col'))));
+        $actual = array_values(array_filter(array_map('trim', $this->texts(self::BLOCK . ' .hub-colhead > .hub-col'))));
         if ($actual !== array_map('trim', explode(',', $names))) {
             throw new ExpectationException("The columns are '" . implode(', ', $actual) . "'", $this->getSession());
         }
     }
 
     /**
+     * The "Module" column of every collapsed row should start at the same x position.
+     *
      * @Then /^the "Module" column of every collapsed row should start at the same x position$/
      */
     public function module_columns_aligned(): void {
@@ -988,12 +1212,16 @@ class behat_block_le_hub_dashboard extends behat_base {
                 . " li[data-region=\"hub-row\"]:not([hidden]) .hub-col--module'))
                 .map(function (el) { return Math.round(el.getBoundingClientRect().left); }); })()");
         if (count(array_unique($lefts)) > 1) {
-            throw new ExpectationException('The Module column starts at ' . implode(', ', array_unique($lefts)),
-                $this->getSession());
+            throw new ExpectationException(
+                'The Module column starts at ' . implode(', ', array_unique($lefts)),
+                $this->getSession()
+            );
         }
     }
 
     /**
+     * The collapsed row "<name>" should link "<text>" to the <where> page.
+     *
      * @Then /^the collapsed row "(?P<name>[^"]*)" should link "(?P<text>[^"]*)" to the (?P<where>activity|course) page$/
      * @param string $name
      * @param string $text
@@ -1009,13 +1237,16 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The first assessment row should be within "<px>" pixels of the top of the block at "<width>" pixels wide.
+     *
+      * @phpcs:ignore moodle.Files.LineLength.TooLong, moodle.Files.LineLength.MaxExceeded
      * @Then /^the first assessment row should be within "(?P<px>\d+)" pixels of the top of the block(?: at "(?P<width>\d+)" pixels wide)?$/
      * @param string $px
      * @param string $width
      */
     public function first_row_within(string $px, string $width = ''): void {
         if ($width !== '') {
-            $this->getSession()->resizeWindow((int)$width, 900, 'current');
+            $this->resize_window($width . 'x900', true);
             $this->wait_for_pending_js();
         }
         $distance = $this->getSession()->evaluateScript("(function () {
@@ -1028,6 +1259,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The first assessment row should still be visible.
+     *
      * @Then /^the first assessment row should still be visible$/
      */
     public function first_row_visible(): void {
@@ -1042,6 +1275,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The collapsed row "<name>" should be at most "<px>" pixels tall.
+     *
      * @Then /^the collapsed row "(?P<name>[^"]*)" should be at most "(?P<px>\d+)" pixels tall$/
      * @param string $name
      * @param string $px
@@ -1057,6 +1292,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The status strip should fit one line.
+     *
      * @Then /^the status strip should fit one line$/
      */
     public function strip_fits_one_line(): void {
@@ -1069,6 +1306,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I scroll to the <n>st row of the "<group>" group.
+     *
      * @When /^I scroll to the (?P<n>\d+)(?:st|nd|rd|th) row of the "(?P<group>[^"]*)" group$/
      * @param string $n
      * @param string $group
@@ -1083,6 +1322,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The "<group>" group header should be stuck to the top of the viewport.
+     *
      * @Then /^the "(?P<group>[^"]*)" group header should be stuck to the top of the viewport$/
      * @param string $group
      */
@@ -1099,6 +1340,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The view editor should open as a side panel.
+     *
      * @Then /^the view editor should open as a side panel$/
      */
     public function editor_is_a_side_panel(): void {
@@ -1109,6 +1352,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I set the view's allocation window to "<days>" days.
+     *
      * @When /^I set the view's allocation window to "(?P<days>\d+)" days$/
      * @param string $days
      */
@@ -1121,6 +1366,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I add the module code line "<kind>" "<text>" to the view editor.
+     *
      * @When /^I add the module code line "(?P<kind>starts with|contains)" "(?P<text>[^"]*)" to the view editor$/
      * @param string $kind
      * @param string $text
@@ -1142,6 +1389,9 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I create a hub view "<name>" with module codes starting with "<first>" or "<second>".
+     *
+      * @phpcs:ignore moodle.Files.LineLength.TooLong, moodle.Files.LineLength.MaxExceeded
      * @When /^I create a hub view "(?P<name>[^"]*)" with (?:module codes starting with "(?P<first>[^"]*)" or "(?P<second>[^"]*)"|the departments "(?P<cats>[^"]*)")$/
      * @param string $name
      * @param string $first
@@ -1162,7 +1412,7 @@ class behat_block_le_hub_dashboard extends behat_base {
         if ($cats !== '') {
             foreach (explode(',', $cats) as $cat) {
                 $this->find('xpath', "//*[contains(@class, 'block_le_hub_dashboard')]//label[contains(@class, 'hub-tree-item')]" .
-                    "[normalize-space(.) = " . behat_context_helper::escape(trim($cat)) . ']//input')->click();
+                    "[normalize-space(.) = " . behat_context_helper::escape(trim($cat)) . ']')->click();
                 $this->wait_for_pending_js();
             }
         }
@@ -1183,6 +1433,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I copy the hub view "<name>" as "<copy>".
+     *
      * @When /^I copy the hub view "(?P<name>[^"]*)" as "(?P<copy>[^"]*)"$/
      * @param string $name
      * @param string $copy
@@ -1199,6 +1451,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I rename the hub view "<name>" to "<newname>".
+     *
      * @When /^I rename the hub view "(?P<name>[^"]*)" to "(?P<newname>[^"]*)"$/
      * @param string $name
      * @param string $newname
@@ -1215,6 +1469,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I delete the hub view "<name>".
+     *
      * @When /^I delete the hub view "(?P<name>[^"]*)"$/
      * @param string $name
      */
@@ -1228,6 +1484,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * The view editor should say "<text>".
+     *
      * @Then /^the view editor should say "(?P<text>[^"]*)"$/
      * @param string $text
      */
@@ -1239,31 +1497,41 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I should see "<text>" in the view editor under "<heading>".
+     *
      * @Then /^I should see "(?P<text>[^"]*)" in the view editor under "(?P<heading>[^"]*)"$/
      * @param string $text
      * @param string $heading
      */
     public function i_should_see_in_the_editor_under(string $text, string $heading): void {
-        $section = $this->find('xpath',
+        $section = $this->find(
+            'xpath',
             "//*[contains(@class, 'block_le_hub_dashboard')]//*[contains(@class, 'hub-panel-section')]" .
-            "[.//*[contains(@class, 'hub-panel-label')][normalize-space(.) = " . behat_context_helper::escape($heading) . ']]');
+            "[.//*[contains(@class, 'hub-panel-label')][normalize-space(.) = " . behat_context_helper::escape($heading) . ']]'
+        );
         if (!str_contains($section->getText(), $text)) {
             throw new ExpectationException("'$text' is not under '$heading' in the editor", $this->getSession());
         }
     }
 
     /**
+     * I click on "<text>" "link" in the view editor.
+     *
      * @When /^I click on "(?P<text>[^"]*)" "link" in the view editor$/
      * @param string $text
      */
     public function i_click_in_the_editor(string $text): void {
-        $this->find('xpath',
+        $this->find(
+            'xpath',
             "//*[contains(@class, 'block_le_hub_dashboard')]//*[@data-region='hub-editor']//a[normalize-space(.) = " .
-            behat_context_helper::escape($text) . ']')->click();
+            behat_context_helper::escape($text) . ']'
+        )->click();
         $this->wait_for_pending_js();
     }
 
     /**
+     * The hub view "<name>" should be open.
+     *
      * @Then /^the hub view "(?P<name>[^"]*)" should be open$/
      * @param string $name
      */
@@ -1276,20 +1544,26 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I put "<code>" back in the hub view.
+     *
      * @When /^I put "(?P<code>[^"]*)" back in the hub view$/
      * @param string $code
      */
     public function i_put_back(string $code): void {
         $this->execute('behat_general::i_click_on_in_the', ['This view', 'button', self::BLOCK, 'css_element']);
         $this->execute('behat_general::i_click_on_in_the', ['Edit what this view shows', 'link', self::BLOCK, 'css_element']);
-        $this->find('xpath',
+        $this->find(
+            'xpath',
             "//*[contains(@class, 'block_le_hub_dashboard')]//*[contains(@class, 'hub-exceptions')]//li[contains(., " .
-            behat_context_helper::escape($code) . ")]//a[@data-action='putback']")->click();
+            behat_context_helper::escape($code) . ")]//a[@data-action='putback']"
+        )->click();
         $this->wait_for_pending_js();
         $this->find('css', self::BLOCK . ' [data-action="close-editor"]')->click();
     }
 
     /**
+     * I add the module "<code>" to the hub view.
+     *
      * @When /^I add the module "(?P<code>[^"]*)" to the hub view$/
      * @param string $code
      */
@@ -1303,6 +1577,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * I add the hub note "<text>" to "<name>"<escalation>.
+     *
      * @When /^I add the hub note "(?P<text>[^"]*)" to "(?P<name>[^"]*)"(?P<escalation> as an escalation)?$/
      * @param string $text
      * @param string $name
