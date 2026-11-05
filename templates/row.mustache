@@ -1,0 +1,162 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template block_le_hub_dashboard/row
+
+    The inside of one hub row (P5, P6): the one-line columns, then the detail that opens under it. The list item
+    is in block_le_hub_dashboard/group, so this renders valid HTML alone. Flags and bars reuse My assessments'
+    templates.
+
+    Example context (json):
+    {
+        "id": "hub-12", "cmid": 12, "courseid": 3, "name": "Problem sheet 4", "url": "https://example.com/mod/assign/view.php?id=12",
+        "course": "MTH2003", "courseurl": "https://example.com/course/view.php?id=3", "coursename": "Linear Algebra",
+        "modicon": {"url": "https://example.com/theme/image.php/boost/assign/1/monologo", "filter": true, "purpose": "assessment", "branded": false},
+        "tip": "Assignment", "assesstype": "summative",
+        "group": "chase", "reasons": [{"key": "late", "label": "Marking late"}],
+        "status": "1 unmarked, 2 days past the marking deadline",
+        "progress": {"segments": [{"key": "submitted", "label": "Submitted", "value": 2, "percent": 100}], "max": 2, "key": "marked",
+            "text": "1 of 2 marked", "label": "Submitted 2, Marked 1, Released 0"},
+        "flags": [], "dates": [], "setup": [{"key": "online", "label": "Online submission"}], "bars": [],
+        "people": {"convenors": [], "hasconvenors": false, "markers": [], "hasmarkers": false, "outstanding": null, "reallocateurl": null},
+        "notes": [], "hasnotes": false,
+        "ignore": {"viewid": 1, "viewname": "Science team", "label": "Ignore in Science team", "module": "This module, MTH2003",
+            "donemodule": "MTH2003 taken out of Science team", "donecm": "Problem sheet 4 taken out of Science team"}
+    }
+}}
+<div class="hub-row-line" data-region="hub-row-line">
+    <div class="hub-col hub-col--icon ma-row-icon ma-tip-wrap">
+        <button type="button" class="ma-row-iconbtn" data-action="tip" aria-expanded="false" aria-controls="{{id}}-tip" aria-label="{{tip}}">
+            {{#modicon}}
+            <span class="activityiconcontainer smaller {{purpose}}{{#branded}} isbranded{{/branded}} ma-row-modicon" aria-hidden="true">
+                <img src="{{url}}" class="activityicon{{^filter}} nofilter{{/filter}}" alt="">
+            </span>
+            {{/modicon}}
+        </button>
+        <div class="ma-tip" id="{{id}}-tip" data-region="ma-tip" hidden>{{tip}}</div>
+    </div>
+    <div class="hub-col hub-col--name">
+        <a class="ma-row-name hub-row-name" href="{{url}}">{{name}}</a>
+    </div>
+    <div class="hub-col hub-col--module">
+        <a class="ma-row-course hub-row-course" href="{{courseurl}}" title="{{coursename}}">{{course}}</a>
+    </div>
+    <div class="hub-col hub-col--reason">
+        {{#reasons}}<span class="badge ma-pill hub-reason hub-reason--{{key}}" data-reason="{{key}}">{{label}}</span>{{/reasons}}
+    </div>
+    <div class="hub-col hub-col--status" data-region="hub-row-status">{{status}}</div>
+    <div class="hub-col hub-col--progress">
+        {{#progress}}
+        <div class="hub-stack" role="img" aria-label="{{label}}" data-region="hub-stack">
+            {{#segments}}<span class="hub-stack-seg hub-stack-seg--{{key}}" data-segment="{{key}}" data-value="{{value}}" style="width: {{percent}}%"></span>{{/segments}}
+        </div>
+        <span class="hub-stack-text" aria-hidden="true">{{text}}</span>
+        {{/progress}}
+    </div>
+    <div class="hub-col hub-col--flags">
+        <div class="ma-flags hub-flags">{{#flags}}{{> block_le_dashboard/hint }}{{/flags}}</div>
+    </div>
+    <div class="hub-col hub-col--toggle">
+        <button type="button" class="hub-row-toggle" data-action="toggle-row" aria-expanded="false" aria-controls="{{id}}-detail">
+            <i class="fa-solid fa-chevron-down hub-chevron" aria-hidden="true"></i>
+            <span class="accesshide" data-region="hub-toggle-label">{{#str}}expand, block_le_hub_dashboard, {{name}}{{/str}}</span>
+        </button>
+    </div>
+</div>
+<div class="hub-row-detail" id="{{id}}-detail" data-region="hub-row-detail" hidden>
+    <div class="hub-detail-grid">
+        <div class="hub-detail-block hub-detail-dates">
+            <div class="hub-detail-title">{{coursename}}</div>
+            <div class="ma-row-dates ma-row-dates--stacked">
+                {{#dates}}
+                <div class="ma-row-date ma-row-date--{{key}}" data-date="{{key}}">
+                    <span class="ma-row-date-label">{{label}}</span> <time datetime="{{iso}}">{{text}}</time>
+                </div>
+                {{/dates}}
+            </div>
+            <ul class="list-unstyled hub-setup" aria-label="{{#str}}setup, block_le_hub_dashboard{{/str}}">
+                {{#setup}}<li class="hub-setup-item" data-setup="{{key}}">{{label}}</li>{{/setup}}
+            </ul>
+        </div>
+        <div class="hub-detail-block hub-detail-bars">
+            {{#bars}}{{> block_le_dashboard/progress }}{{/bars}}
+        </div>
+        <div class="hub-detail-block hub-detail-people">
+            <h4 class="hub-detail-heading">{{#str}}people, block_le_hub_dashboard{{/str}}</h4>
+            {{#people}}
+            <ul class="list-unstyled hub-people">
+                {{#convenors}}
+                <li class="hub-person" data-role="convenor"><a href="{{url}}">{{name}}</a> <span class="hub-person-role">{{#str}}convenor, block_le_hub_dashboard{{/str}}</span></li>
+                {{/convenors}}
+                {{#markers}}
+                <li class="hub-person{{#hastodo}} hub-person--todo{{/hastodo}}" data-role="marker">
+                    {{#url}}<a href="{{url}}">{{name}}</a>{{/url}}{{^url}}<span>{{name}}</span>{{/url}} <span class="hub-person-role">{{#str}}marker, block_le_hub_dashboard{{/str}}</span>
+                    <div class="hub-person-bars">{{#bars}}{{> block_le_dashboard/progress }}{{/bars}}</div>
+                </li>
+                {{/markers}}
+            </ul>
+            <div class="hub-people-actions">
+                {{#outstanding}}<a class="btn btn-sm ma-btn" href="{{outstanding}}"><i class="fa-solid fa-envelope ma-icon" aria-hidden="true"></i>{{#str}}email_outstanding, block_le_hub_dashboard{{/str}}</a>{{/outstanding}}
+                {{#reallocateurl}}<a class="btn btn-sm ma-btn" href="{{reallocateurl}}">{{#str}}reallocate, block_le_hub_dashboard{{/str}}</a>{{/reallocateurl}}
+            </div>
+            {{/people}}
+        </div>
+        <div class="hub-detail-block hub-detail-notes" data-region="hub-notes">
+            <h4 class="hub-detail-heading">{{#str}}notes, block_le_hub_dashboard{{/str}}</h4>
+            {{#hasnotes}}
+            <ul class="list-unstyled hub-notes">
+                {{#notes}}
+                <li class="hub-note{{#escalated}} hub-note--escalated{{/escalated}}" data-region="hub-note">
+                    <div class="hub-note-by">{{#authorurl}}<a href="{{authorurl}}">{{author}}</a>{{/authorurl}}{{^authorurl}}{{author}}{{/authorurl}}, <time datetime="{{iso}}">{{when}}</time>{{#escalated}} <span class="badge ma-pill ma-pill--unreleased hub-note-esc">{{#str}}note_escalated, block_le_hub_dashboard{{/str}}</span>{{/escalated}}</div>
+                    <div class="hub-note-text">{{text}}</div>
+                </li>
+                {{/notes}}
+            </ul>
+            {{/hasnotes}}
+            {{^hasnotes}}<p class="text-muted hub-nonotes">{{#str}}nonotes, block_le_hub_dashboard{{/str}}</p>{{/hasnotes}}
+            <button type="button" class="btn btn-sm ma-btn" data-action="add-note">{{#str}}addnote, block_le_hub_dashboard{{/str}}</button>
+            <form class="hub-noteform" data-region="hub-noteform" hidden>
+                <label class="accesshide" for="{{id}}-note">{{#str}}notes, block_le_hub_dashboard{{/str}}</label>
+                <textarea id="{{id}}-note" class="form-control form-control-sm" rows="2" maxlength="1000" required
+                          placeholder="{{#str}}note_placeholder, block_le_hub_dashboard{{/str}}" data-region="hub-note-text"></textarea>
+                <div class="hub-noteform-line">
+                    <label class="hub-noteform-esc"><input type="checkbox" data-region="hub-note-escalated"> {{#str}}note_escalated, block_le_hub_dashboard{{/str}}</label>
+                    <span class="hub-noteform-buttons">
+                        <button type="button" class="btn btn-sm ma-btn" data-action="cancel-note">{{#str}}note_cancel, block_le_hub_dashboard{{/str}}</button>
+                        <button type="submit" class="btn btn-sm ma-btn ma-btn--submit" data-action="save-note">{{#str}}note_save, block_le_hub_dashboard{{/str}}</button>
+                    </span>
+                </div>
+                <p class="text-muted hub-noteform-hint">{{#str}}note_hint, block_le_hub_dashboard{{/str}}</p>
+            </form>
+        </div>
+    </div>
+    {{#ignore}}
+    <div class="hub-detail-foot">
+        <span class="text-muted">{{#str}}hubonly, block_le_hub_dashboard{{/str}}</span>
+        <div class="dropdown hub-ignore" data-region="hub-ignore">
+            <button type="button" class="btn btn-sm ma-btn dropdown-toggle" id="{{id}}-ignore" data-action="ignore-menu"
+                    data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{label}}</button>
+            <div class="dropdown-menu dropdown-menu-right dropdown-menu-end" aria-labelledby="{{id}}-ignore">
+                <a class="dropdown-item" href="#" data-action="ignore" data-kind="outcourse" data-value="{{courseid}}" data-label="{{module}}"
+                   data-done="{{donemodule}}"><span data-region="hub-ignore-label">{{module}}</span></a>
+                <a class="dropdown-item" href="#" data-action="ignore" data-kind="outcm" data-value="{{cmid}}" data-label="{{#str}}ignore_assessment, block_le_hub_dashboard{{/str}}"
+                   data-done="{{donecm}}"><span data-region="hub-ignore-label">{{#str}}ignore_assessment, block_le_hub_dashboard{{/str}}</span></a>
+            </div>
+        </div>
+    </div>
+    {{/ignore}}
+</div>

@@ -1,0 +1,129 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template block_le_hub_dashboard/editor
+
+    The view editor (P7): a side panel beside the list, a full sheet on a phone. Every change saves at once and the
+    list behind updates. Rendered hidden with the view; hub.js opens it.
+
+    Example context (json):
+    {
+        "uniqid": "hub1",
+        "view": {"id": 1, "name": "Science team", "allocdays": 30},
+        "editor": {
+            "categories": [{"id": 2, "name": "Faculty of Science", "depth": 1, "parent": 0, "checked": true}],
+            "codes": [{"kind": "starts", "value": "MTH"}], "hascodes": true,
+            "added": [], "hasadded": false,
+            "outcourses": [{"id": 5, "code": "BIO1"}], "hasoutcourses": true,
+            "outcms": [{"id": 12, "name": "Problem sheet 4"}], "hasoutcms": true, "hasexceptions": true,
+            "allocdays": 30, "modules": "3 of 13 modules"
+        }
+    }
+}}
+<div class="hub-scrim" data-region="hub-scrim" hidden></div>
+<aside class="hub-panel" data-region="hub-editor" role="dialog" aria-modal="false" aria-labelledby="{{uniqid}}-editor-title" tabindex="-1" hidden>
+    <div class="hub-panel-head">
+        <div>
+            <h3 class="hub-panel-title" id="{{uniqid}}-editor-title">{{#str}}editor_title, block_le_hub_dashboard{{/str}}</h3>
+            <span class="text-muted hub-panel-count" data-region="hub-editor-count">{{editor.modules}}</span>
+        </div>
+        <button type="button" class="btn btn-sm ma-btn" data-action="close-editor">{{#str}}editor_close, block_le_hub_dashboard{{/str}}</button>
+    </div>
+    <div class="hub-panel-body">
+        <div class="hub-panel-section">
+            <label class="hub-panel-label" for="{{uniqid}}-editor-name">{{#str}}editor_name, block_le_hub_dashboard{{/str}}</label>
+            <input type="text" id="{{uniqid}}-editor-name" class="form-control form-control-sm" value="{{view.name}}" maxlength="100" data-action="view-name">
+        </div>
+        <div class="hub-panel-section" data-region="hub-editor-cats">
+            <h4 class="hub-panel-label" id="{{uniqid}}-editor-cats">{{#str}}editor_departments, block_le_hub_dashboard{{/str}}</h4>
+            <p class="text-muted hub-panel-hint">{{#str}}editor_hint_departments, block_le_hub_dashboard{{/str}}</p>
+            <div class="hub-tree" role="group" aria-labelledby="{{uniqid}}-editor-cats">
+                {{#editor.categories}}
+                <label class="hub-tree-item hub-tree-item--depth{{depth}}">
+                    <input type="checkbox" data-action="shape" data-kind="cat" value="{{id}}"{{#checked}} checked{{/checked}}> {{name}}
+                </label>
+                {{/editor.categories}}
+            </div>
+        </div>
+        <div class="hub-panel-section" data-region="hub-editor-codes">
+            <h4 class="hub-panel-label">{{#str}}editor_codes, block_le_hub_dashboard{{/str}}</h4>
+            <p class="text-muted hub-panel-hint">{{#str}}editor_hint_codes, block_le_hub_dashboard{{/str}}</p>
+            <div data-region="hub-editor-lines">
+                {{#editor.codes}}
+                <div class="hub-code-line" data-region="hub-code-line">
+                    <select class="{{selectclass}} hub-code-kind" data-action="shape" data-kind="codekind" aria-label="{{#str}}editor_kind, block_le_hub_dashboard{{/str}}">
+                        <option value="starts"{{#starts}} selected{{/starts}}>{{#str}}editor_starts, block_le_hub_dashboard{{/str}}</option>
+                        <option value="contains"{{#contains}} selected{{/contains}}>{{#str}}editor_contains, block_le_hub_dashboard{{/str}}</option>
+                    </select>
+                    <input type="text" class="form-control form-control-sm hub-code-value" data-action="shape" data-kind="codevalue" value="{{value}}" maxlength="50"
+                           aria-label="{{#str}}editor_code, block_le_hub_dashboard{{/str}}">
+                    <button type="button" class="btn btn-sm ma-btn hub-code-remove" data-action="remove-line" aria-label="{{#str}}editor_removeline, block_le_hub_dashboard{{/str}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                </div>
+                {{/editor.codes}}
+            </div>
+            <template data-region="hub-code-template">
+                <div class="hub-code-line" data-region="hub-code-line">
+                    <select class="{{selectclass}} hub-code-kind" data-action="shape" data-kind="codekind" aria-label="{{#str}}editor_kind, block_le_hub_dashboard{{/str}}">
+                        <option value="starts">{{#str}}editor_starts, block_le_hub_dashboard{{/str}}</option>
+                        <option value="contains">{{#str}}editor_contains, block_le_hub_dashboard{{/str}}</option>
+                    </select>
+                    <input type="text" class="form-control form-control-sm hub-code-value" data-action="shape" data-kind="codevalue" value="" maxlength="50"
+                           aria-label="{{#str}}editor_code, block_le_hub_dashboard{{/str}}">
+                    <button type="button" class="btn btn-sm ma-btn hub-code-remove" data-action="remove-line" aria-label="{{#str}}editor_removeline, block_le_hub_dashboard{{/str}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                </div>
+            </template>
+            <button type="button" class="btn btn-sm btn-link hub-linkbtn" data-action="add-line"><i class="fa-solid fa-plus ma-icon" aria-hidden="true"></i>{{#str}}editor_addline, block_le_hub_dashboard{{/str}}</button>
+        </div>
+        <div class="hub-panel-section">
+            <h4 class="hub-panel-label">{{#str}}editor_allocation, block_le_hub_dashboard{{/str}}</h4>
+            <p class="text-muted hub-panel-hint">{{#str}}editor_hint_allocdays, block_le_hub_dashboard{{/str}}</p>
+            <label class="hub-allocdays">
+                <span>{{#str}}editor_allocdays, block_le_hub_dashboard{{/str}}</span>
+                <input type="number" class="form-control form-control-sm hub-allocdays-input" min="0" max="365" value="{{editor.allocdays}}" data-action="allocdays">
+                <span>{{#str}}editor_days, block_le_hub_dashboard{{/str}}</span>
+            </label>
+        </div>
+        <div class="hub-panel-section" data-region="hub-editor-exceptions">
+            <h4 class="hub-panel-label">{{#str}}editor_exceptions, block_le_hub_dashboard{{/str}}</h4>
+            <p class="text-muted hub-panel-hint">{{#str}}editor_hint_exceptions, block_le_hub_dashboard{{/str}}</p>
+            {{#editor.hasadded}}
+            <div class="hub-exceptions-title">{{#str}}editor_added, block_le_hub_dashboard{{/str}}</div>
+            <ul class="list-unstyled hub-exceptions">
+                {{#editor.added}}<li><span>{{code}}</span> <a href="#" class="hub-linkbtn" data-action="remove-added" data-value="{{id}}">{{#str}}editor_remove, block_le_hub_dashboard{{/str}}</a></li>{{/editor.added}}
+            </ul>
+            {{/editor.hasadded}}
+            {{#editor.hasoutcourses}}
+            <div class="hub-exceptions-title">{{#str}}editor_outmodules, block_le_hub_dashboard{{/str}}</div>
+            <ul class="list-unstyled hub-exceptions">
+                {{#editor.outcourses}}<li><span>{{code}}</span> <a href="#" class="hub-linkbtn" data-action="putback" data-kind="outcourse" data-value="{{id}}">{{#str}}putback, block_le_hub_dashboard{{/str}}</a></li>{{/editor.outcourses}}
+            </ul>
+            {{/editor.hasoutcourses}}
+            {{#editor.hasoutcms}}
+            <div class="hub-exceptions-title">{{#str}}editor_outcms, block_le_hub_dashboard{{/str}}</div>
+            <ul class="list-unstyled hub-exceptions">
+                {{#editor.outcms}}<li><span>{{name}}</span> <a href="#" class="hub-linkbtn" data-action="putback" data-kind="outcm" data-value="{{id}}">{{#str}}putback, block_le_hub_dashboard{{/str}}</a></li>{{/editor.outcms}}
+            </ul>
+            {{/editor.hasoutcms}}
+            <div class="hub-code-line hub-addmodule">
+                <input type="text" class="form-control form-control-sm" data-region="hub-addmodule" placeholder="{{#str}}editor_addmodule, block_le_hub_dashboard{{/str}}"
+                       aria-label="{{#str}}editor_addmodule, block_le_hub_dashboard{{/str}}" maxlength="100">
+                <button type="button" class="btn btn-sm ma-btn" data-action="add-module">{{#str}}editor_add, block_le_hub_dashboard{{/str}}</button>
+            </div>
+            <p class="hub-editor-error text-danger" data-region="hub-editor-error" role="alert" hidden></p>
+        </div>
+    </div>
+</aside>

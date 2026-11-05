@@ -1,0 +1,966 @@
+/* block_le_hub_dashboard styles. Compiled from scss/styles.scss with Dart Sass; edit that file, not this one. */
+
+// The hub root carries My assessments' root class as well as .le-hub, so that block's rows, flags, popovers,
+// pills, bars and buttons (and its --ma-* palette, checked for WCAG and APCA there) style the hub too. Everything
+// here is the hub's own layout, hung on .le-hub. Font sizes and faces are the theme's: the hub sets no
+// font-family and no size of its own, except where it reuses My assessments' small text (its pills and flags).
+// Colours are the palette's custom properties, so the theme's brand colours carry through.
+
+// Small text, the size My assessments checked its APCA targets at.
+$hub-font-small: 0.8203rem;
+
+// Where group headers stick: under Boost's fixed navbar.
+$hub-sticky-top: var(--hub-sticky-top, 60px);
+
+// The stacked progress bar's segments (P5), as solid tones so each is 3:1 or better on the white track and
+// adjacent segments tell apart (CONTRAST.md records the ratios). Later segments paint over earlier ones.
+$hub-segments: (
+    "submitted": "grey",
+    "marked": "primary",
+    "moderated": "info",
+    "sent": "attention",
+    "released": "success",
+);
+
+// Groups (P9) and their reasons take one tone each: Ready to go is orange, the hub's own next step; Chase is
+// the brand colour; In progress is info; Done is grey.
+$hub-group-tones: (
+    "ready": "attention",
+    "chase": "primary",
+    "progress": "info",
+    "done": "grey",
+);
+
+$hub-reason-tones: (
+    "release": "attention",
+    "allocate": "attention",
+    "late": "primary",
+    "risk": "primary",
+    "notsent": "primary",
+    "early": "primary",
+    "changedsent": "primary",
+    "upcoming": "info",
+    "ontrack": "info",
+    "released": "grey",
+    "changedrel": "grey",
+);
+
+.block_le_dashboard_dashboard.le-hub {
+    // The theme's body size, not My assessments' small text.
+    font-size: inherit;
+
+    // Row columns (P5): icon, Assessment, Module, Reason, Status, Progress, Flags, chevron. One rule, so the
+    // column header and every row line up.
+    --hub-columns: 2rem minmax(9rem, 1.5fr) 5.5rem minmax(7rem, 9rem) minmax(10rem, 1.5fr) 9rem minmax(5rem, auto) 2rem;
+    --hub-areas: "icon name module reason status progress flags toggle";
+
+    .hub-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .hub-control {
+        flex: 0 0 auto;
+    }
+
+    .hub-find {
+        position: relative;
+        flex: 1 1 14rem;
+        min-width: 12rem;
+        max-width: 26rem;
+    }
+
+    .hub-spacer {
+        flex: 1 0 0;
+    }
+
+    .hub-freshness {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0;
+    }
+
+    .hub-viewpick select {
+        max-width: 14rem;
+    }
+
+    // Find suggestions (P2): a list under the box, surface over the rows.
+    .hub-suggest {
+        position: absolute;
+        z-index: 1010;
+        top: calc(100% + 0.25rem);
+        left: 0;
+        width: 100%;
+        min-width: 16rem;
+        max-height: 20rem;
+        overflow-y: auto;
+        padding: 0.25rem 0;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+        border-radius: 0.3rem;
+        box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.15);
+        background-color: var(--ma-surface);
+    }
+
+    .hub-suggest-heading {
+        padding: 0.25rem 0.75rem;
+        color: var(--ma-text-muted);
+        font-size: $hub-font-small;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
+    .hub-suggest-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        width: 100%;
+        padding: 0.35rem 0.75rem;
+        border: 0;
+        background: none;
+        color: var(--ma-text);
+        text-align: left;
+
+        &:hover,
+        &[aria-selected="true"] {
+            background-color: var(--ma-primary-fill);
+        }
+
+        &:focus-visible {
+            outline: 0;
+            box-shadow: inset var(--ma-focus-ring);
+        }
+    }
+
+    .hub-suggest-kind {
+        color: var(--ma-text-muted);
+        font-size: $hub-font-small;
+        white-space: nowrap;
+    }
+
+    .hub-suggest-empty {
+        padding: 0.35rem 0.75rem;
+        color: var(--ma-text-muted);
+        font-size: $hub-font-small;
+    }
+
+    // The Filter list (P3): grouped checkboxes that stay open while ticking.
+    .hub-filter-menu {
+        min-width: 16rem;
+        max-height: 70vh;
+        overflow-y: auto;
+        padding: 0.25rem 0;
+    }
+
+    .hub-filter-heading {
+        padding: 0.4rem 1rem 0.15rem;
+        color: var(--ma-text-muted);
+        font-size: $hub-font-small;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
+    .hub-filter-item {
+        display: block;
+        margin: 0;
+        padding: 0.2rem 1rem;
+        cursor: pointer;
+        white-space: normal;
+
+        input {
+            margin-right: 0.35rem;
+        }
+    }
+
+    // Chips (P2, P3): the active word and filter choices, under the bar.
+    .hub-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin-bottom: 0.5rem;
+
+        &:empty {
+            display: none;
+        }
+    }
+
+    .hub-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0 0.25rem 0 0.6rem;
+        border: 1px solid var(--ma-grey-border);
+        border-radius: 999px;
+        background-color: var(--ma-grey-fill);
+        color: var(--ma-grey-ink);
+        font-size: $hub-font-small;
+        font-weight: 600;
+        line-height: 1.6;
+    }
+
+    .hub-chip-mode {
+        padding: 0 0.4rem;
+        border: 1px solid var(--ma-grey-border);
+        border-radius: 999px;
+        background-color: var(--ma-surface);
+        color: var(--ma-grey-ink);
+        font-size: $hub-font-small;
+        font-weight: 600;
+        line-height: 1.4;
+
+        &[aria-pressed="true"] {
+            background-color: var(--ma-primary-ink);
+            border-color: var(--ma-primary-ink);
+            color: #fff;
+        }
+    }
+
+    .hub-chip-remove {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        padding: 0;
+        border: 0;
+        border-radius: 999px;
+        background: none;
+        color: var(--ma-grey-ink);
+
+        &:hover {
+            background-color: var(--ma-grey-hover);
+        }
+    }
+
+    .hub-chip-mode,
+    .hub-chip-remove,
+    .hub-strip-pill,
+    .hub-group-toggle,
+    .hub-reason-toggle,
+    .hub-row-toggle,
+    .hub-suggest-item,
+    .hub-linkbtn {
+        &:focus {
+            outline: 0;
+            box-shadow: none;
+        }
+
+        &:focus-visible {
+            box-shadow: var(--ma-focus-ring);
+        }
+    }
+
+    // A person's scope banner (P2).
+    .hub-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid var(--ma-info-border);
+        border-radius: 0.3rem;
+        background-color: var(--ma-info-fill);
+        color: var(--ma-info-ink);
+    }
+
+    // The status strip (P4): four count pills that jump to their group; one line that scrolls sideways on a phone.
+    .hub-strip {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+        overflow-x: auto;
+        padding-bottom: 0.25rem;
+    }
+
+    .hub-strip-pill {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.25rem 0.75rem 0.25rem 0.5rem;
+        border: 1px solid var(--ma-border);
+        border-radius: 999px;
+        background-color: var(--ma-fill);
+        color: var(--ma-ink);
+        font-weight: 600;
+        white-space: nowrap;
+
+        &:hover {
+            background-color: var(--ma-hover);
+        }
+    }
+
+    .hub-strip-count {
+        min-width: 1.5rem;
+        padding: 0 0.4rem;
+        border-radius: 999px;
+        background-color: var(--ma-surface);
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+    }
+
+    @each $group, $tone in $hub-group-tones {
+        .hub-strip-pill--#{$group},
+        .hub-group--#{$group} .hub-group-header {
+            --ma-fill: var(--ma-#{$tone}-fill);
+            --ma-hover: var(--ma-#{$tone}-hover);
+            --ma-border: var(--ma-#{$tone}-border);
+            --ma-ink: var(--ma-#{$tone}-ink);
+        }
+    }
+
+    // The legend for the stacked bar, and the column header (P5): quiet lines above the groups.
+    .hub-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem 1rem;
+        margin-bottom: 0.25rem;
+        color: var(--ma-text-muted);
+        font-size: $hub-font-small;
+    }
+
+    .hub-legend-item::before {
+        content: "";
+        display: inline-block;
+        width: 0.6rem;
+        height: 0.6rem;
+        margin-right: 0.3rem;
+        border-radius: 2px;
+        background-color: var(--hub-seg);
+        vertical-align: -0.05em;
+    }
+
+    @each $segment, $tone in $hub-segments {
+        .hub-legend-item--#{$segment},
+        .hub-stack-seg--#{$segment} {
+            --hub-seg: var(--ma-#{$tone}-solid);
+        }
+    }
+
+    // Orange's solid is too light on white for a 3:1 segment: its glyph step (checked in My assessments) instead.
+    .hub-legend-item--sent,
+    .hub-stack-seg--sent {
+        --hub-seg: var(--ma-attention-glyph);
+    }
+
+    .hub-colhead,
+    .hub-row-line {
+        display: grid;
+        grid-template-columns: var(--hub-columns);
+        grid-template-areas: var(--hub-areas);
+        align-items: center;
+        column-gap: 0.75rem;
+    }
+
+    .hub-colhead {
+        padding: 0.25rem 0.5rem;
+        border-bottom: 1px solid var(--ma-rule);
+        color: var(--ma-text-muted);
+        font-size: $hub-font-small;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
+    .hub-col--icon {
+        grid-area: icon;
+    }
+
+    .hub-col--name {
+        grid-area: name;
+        min-width: 0;
+    }
+
+    .hub-col--module {
+        grid-area: module;
+        min-width: 0;
+    }
+
+    .hub-col--reason {
+        display: flex;
+        flex-wrap: wrap;
+        grid-area: reason;
+        gap: 0.25rem;
+        min-width: 0;
+    }
+
+    .hub-col--status {
+        grid-area: status;
+        min-width: 0;
+    }
+
+    .hub-col--progress {
+        grid-area: progress;
+        min-width: 0;
+    }
+
+    .hub-col--flags {
+        grid-area: flags;
+        min-width: 0;
+    }
+
+    .hub-col--toggle {
+        grid-area: toggle;
+        text-align: right;
+    }
+
+    // Groups (P9): slim headers that stick while their rows scroll past.
+    .hub-group {
+        margin-bottom: 0.75rem;
+    }
+
+    .hub-group-header {
+        display: flex;
+        position: sticky;
+        z-index: 2;
+        top: $hub-sticky-top;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.25rem 0.75rem;
+        padding: 0.35rem 0.5rem;
+        border-top: 2px solid var(--ma-border);
+        border-bottom: 1px solid var(--ma-rule);
+        // Opaque, so rows scrolling under it don't show through.
+        background-color: var(--ma-surface);
+        background-image: linear-gradient(var(--ma-fill), var(--ma-fill));
+    }
+
+    .hub-group-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.1rem 0.25rem;
+        border: 0;
+        background: none;
+        color: var(--ma-ink);
+        font-weight: 600;
+        text-align: left;
+    }
+
+    .hub-group-title {
+        font-size: 0.9375rem;
+    }
+
+    .hub-group-count {
+        padding: 0.2em 0.5em;
+        border-radius: 999px;
+        background-color: var(--ma-surface);
+        color: var(--ma-ink);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .hub-chevron {
+        transition: transform 0.15s;
+
+        @media (prefers-reduced-motion: reduce) {
+            transition: none;
+        }
+    }
+
+    .hub-group--collapsed .hub-group-toggle .hub-chevron,
+    .hub-row-toggle[aria-expanded="false"] .hub-chevron {
+        transform: rotate(-90deg);
+    }
+
+    .hub-group--collapsed .hub-rows {
+        display: none;
+    }
+
+    .hub-group-reasons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+
+    .hub-reason-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0 0.6rem;
+        border: 1px solid var(--ma-border);
+        border-radius: 999px;
+        background-color: var(--ma-surface);
+        color: var(--ma-ink);
+        font-size: $hub-font-small;
+        font-weight: 600;
+        line-height: 1.6;
+
+        &:hover {
+            background-color: var(--ma-hover);
+        }
+
+        &[aria-pressed="true"] {
+            background-color: var(--ma-ink);
+            border-color: var(--ma-ink);
+            color: #fff;
+        }
+    }
+
+    .hub-reason-count {
+        font-variant-numeric: tabular-nums;
+    }
+
+    .hub-rows {
+        margin: 0;
+    }
+
+    .hub-row {
+        border-bottom: 1px solid var(--ma-rule);
+    }
+
+    .hub-row-line {
+        padding: 0.4rem 0.5rem;
+    }
+
+    .hub-row-line:hover {
+        background-color: var(--ma-grey-fill);
+    }
+
+    .hub-row--open .hub-row-line {
+        background-color: var(--ma-grey-fill);
+    }
+
+    .hub-row-name {
+        display: block;
+        overflow: hidden;
+        font-size: inherit;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .hub-row--open .hub-row-name {
+        white-space: normal;
+    }
+
+    .hub-row-course {
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    // Reason tags (P9): a pill in the group's tone.
+    @each $reason, $tone in $hub-reason-tones {
+        .hub-reason--#{$reason} {
+            --ma-fill: var(--ma-#{$tone}-fill);
+            --ma-ink: var(--ma-#{$tone}-ink);
+        }
+    }
+
+    .hub-reason {
+        white-space: nowrap;
+    }
+
+    // The stacked bar (P5): segments painted over one another on a white track, the key number under it.
+    .hub-stack {
+        position: relative;
+        height: 0.5rem;
+        overflow: hidden;
+        border-radius: 999px;
+        background-color: var(--ma-surface);
+        box-shadow: inset 0 0 0 1px var(--ma-rule);
+    }
+
+    .hub-stack-seg {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        border-radius: 999px;
+        background-color: var(--hub-seg);
+        // A hairline of the track's white at each segment's end, so neighbouring tones that are under 3:1 against
+        // each other still read as separate segments (CONTRAST.md).
+        box-shadow: 1px 0 0 var(--ma-surface, #fff);
+    }
+
+    .hub-stack-text {
+        display: block;
+        margin-top: 0.15rem;
+        color: var(--ma-text-muted);
+        font-size: $hub-font-small;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    .hub-flags {
+        margin-top: 0;
+    }
+
+    .hub-row-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.75rem;
+        height: 1.75rem;
+        padding: 0;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        background: none;
+        color: var(--ma-text-muted);
+
+        &:hover {
+            border-color: var(--ma-grey-border);
+            background-color: var(--ma-grey-hover);
+            color: var(--ma-text);
+        }
+    }
+
+    // The expanded row (P6).
+    .hub-row-detail {
+        padding: 0.25rem 0.5rem 0.75rem 2.75rem;
+    }
+
+    .hub-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+        gap: 0.75rem 1.5rem;
+    }
+
+    .hub-detail-title {
+        margin-bottom: 0.25rem;
+        font-weight: 600;
+    }
+
+    .hub-detail-heading {
+        margin: 0 0 0.25rem;
+        color: var(--ma-text-muted);
+        font-size: $hub-font-small;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
+    .hub-setup {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        margin: 0.5rem 0 0;
+    }
+
+    .hub-setup-item {
+        padding: 0 0.5rem;
+        border: 1px solid var(--ma-grey-border);
+        border-radius: 999px;
+        color: var(--ma-grey-ink);
+        font-size: $hub-font-small;
+        line-height: 1.6;
+    }
+
+    .hub-detail-bars {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .hub-people {
+        margin: 0;
+    }
+
+    .hub-person {
+        margin-bottom: 0.25rem;
+    }
+
+    .hub-person-role {
+        color: var(--ma-text-muted);
+        font-size: $hub-font-small;
+    }
+
+    .hub-person-bars {
+        margin-top: 0.1rem;
+    }
+
+    .hub-people-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin-top: 0.35rem;
+    }
+
+    .hub-notes {
+        margin: 0 0 0.35rem;
+    }
+
+    .hub-note {
+        margin-bottom: 0.35rem;
+    }
+
+    .hub-note-by {
+        color: var(--ma-text-muted);
+        font-size: $hub-font-small;
+    }
+
+    .hub-noteform {
+        margin-top: 0.5rem;
+    }
+
+    .hub-noteform-line {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-top: 0.35rem;
+    }
+
+    .hub-noteform-hint,
+    .hub-nonotes {
+        margin: 0.25rem 0 0.35rem;
+        font-size: $hub-font-small;
+    }
+
+    .hub-detail-foot {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+        font-size: $hub-font-small;
+    }
+
+    // An Ignore item armed for its second click, and Delete view: Moodle's destructive-action red.
+    .hub-ignore .dropdown-item[data-armed],
+    .hub-danger {
+        color: var(--bs-danger, var(--danger, #ca3120));
+
+        &:hover,
+        &:focus {
+            background-color: var(--bs-danger, var(--danger, #ca3120));
+            color: #fff;
+        }
+    }
+
+    // The toast, with Undo (P6).
+    .hub-toast {
+        display: flex;
+        position: fixed;
+        z-index: 1060;
+        bottom: 1.5rem;
+        left: 50%;
+        align-items: center;
+        gap: 0.75rem;
+        max-width: calc(100vw - 2rem);
+        padding: 0.6rem 1rem;
+        border-radius: 0.3rem;
+        box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.25);
+        background-color: var(--ma-text);
+        color: #fff;
+        transform: translateX(-50%);
+    }
+
+    .hub-toast-undo {
+        --ma-rest: transparent;
+        --ma-line: #fff;
+        --ma-ink: #fff;
+        --ma-hover: rgba(255, 255, 255, 0.15);
+    }
+
+    // The view editor (P7): a panel on the right over the page, the list still visible beside it on a wide screen;
+    // the whole screen on a phone.
+    .hub-scrim {
+        position: fixed;
+        z-index: 1040;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.3);
+    }
+
+    .hub-panel {
+        display: flex;
+        position: fixed;
+        z-index: 1050;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        flex-direction: column;
+        // stylelint-disable-next-line csstree/validator
+        width: min(26rem, 100vw);
+        box-shadow: -0.25rem 0 1rem rgba(0, 0, 0, 0.2);
+        background-color: var(--ma-surface);
+        color: var(--ma-text);
+    }
+
+    .hub-panel-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 1rem 1rem 0.5rem;
+        border-bottom: 1px solid var(--ma-rule);
+    }
+
+    .hub-panel-title {
+        margin: 0;
+        font-size: 1.1rem;
+    }
+
+    .hub-panel-count {
+        font-size: $hub-font-small;
+    }
+
+    .hub-panel-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 0.5rem 1rem 1rem;
+    }
+
+    .hub-panel-section {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--ma-rule);
+
+        &:last-child {
+            border-bottom: 0;
+        }
+    }
+
+    .hub-panel-label {
+        display: block;
+        margin: 0 0 0.25rem;
+        font-size: inherit;
+        font-weight: 600;
+    }
+
+    .hub-panel-hint {
+        margin: 0 0 0.5rem;
+        font-size: $hub-font-small;
+    }
+
+    .hub-tree {
+        max-height: 16rem;
+        overflow-y: auto;
+    }
+
+    .hub-tree-item {
+        display: block;
+        margin: 0;
+        padding: 0.1rem 0;
+
+        input {
+            margin-right: 0.35rem;
+        }
+    }
+
+    @for $depth from 2 through 6 {
+        .hub-tree-item--depth#{$depth} {
+            padding-left: #{($depth - 1) * 1.25rem};
+        }
+    }
+
+    .hub-code-line {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .hub-code-kind {
+        flex: 0 0 8rem;
+    }
+
+    .hub-code-value {
+        flex: 1 1 auto;
+    }
+
+    .hub-linkbtn {
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--ma-primary-ink);
+        font-size: inherit;
+        text-decoration: underline;
+    }
+
+    .hub-allocdays {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.35rem;
+        margin: 0;
+    }
+
+    .hub-allocdays-input {
+        width: 5rem;
+    }
+
+    .hub-exceptions-title {
+        margin-top: 0.35rem;
+        color: var(--ma-text-muted);
+        font-size: $hub-font-small;
+        font-weight: 600;
+    }
+
+    .hub-exceptions {
+        margin: 0 0 0.35rem;
+
+        li {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.5rem;
+            padding: 0.1rem 0;
+        }
+    }
+
+    .hub-editor-error {
+        margin: 0.35rem 0 0;
+        font-size: $hub-font-small;
+    }
+
+    // Narrower blocks: the status and progress drop to a second line under the name.
+    // stylelint-disable-next-line csstree/validator
+    @container ma (width < 62rem) {
+        .hub-colhead,
+        .hub-row-line {
+            --hub-columns: 2rem minmax(0, 1fr) 5.5rem minmax(7rem, 9rem) minmax(5rem, auto) 2rem;
+            --hub-areas: "icon name module reason flags toggle" "icon status status progress progress toggle";
+        }
+
+        .hub-colhead {
+            display: none;
+        }
+
+        .hub-col--status,
+        .hub-col--progress {
+            margin-top: 0.25rem;
+        }
+    }
+
+    // A phone: four short lines, the module beside the name; the row stays under 160px (P5).
+    // stylelint-disable-next-line csstree/validator
+    @container ma (width < 34rem) {
+        .hub-colhead,
+        .hub-row-line {
+            --hub-columns: 2rem minmax(0, 1fr) auto 2rem;
+            --hub-areas: "icon name name toggle" "icon module reason toggle" "icon status status toggle" "icon progress flags toggle";
+        }
+
+        .hub-row-line {
+            row-gap: 0.15rem;
+        }
+
+        .hub-col--status,
+        .hub-col--progress {
+            margin-top: 0;
+        }
+
+        .hub-row-detail {
+            padding-left: 0.5rem;
+        }
+
+        .hub-find {
+            flex-basis: 100%;
+            max-width: none;
+        }
+
+        .hub-spacer {
+            display: none;
+        }
+
+        .hub-legend {
+            display: none;
+        }
+    }
+}

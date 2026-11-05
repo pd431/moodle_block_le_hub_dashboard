@@ -1,0 +1,173 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template block_le_hub_dashboard/view
+
+    The open view: one control bar (P1), the chips and person banner (P2, P3), the status strip (P4), the column
+    header and the four groups (P9), and the view editor panel (P7). Replaced whole by every service reply.
+
+    Example context (json):
+    {
+        "uniqid": "hub1",
+        "state": "{\"viewid\":1,\"yearid\":0,\"type\":\"summative\",\"personid\":0}",
+        "selectclass": "custom-select custom-select-sm",
+        "hasviews": true,
+        "views": [{"id": 1, "name": "Science team", "selected": true}],
+        "view": {"id": 1, "name": "Science team", "allocdays": 30},
+        "editor": {"categories": [], "codes": [], "hascodes": false, "added": [], "hasadded": false, "outcourses": [],
+            "hasoutcourses": false, "outcms": [], "hasoutcms": false, "hasexceptions": false, "allocdays": 30, "modules": "3 of 13 modules"},
+        "person": null,
+        "years": [{"id": 0, "label": "All years", "selected": true}],
+        "types": [{"key": "summative", "label": "Summative", "active": true}],
+        "type": "summative",
+        "filters": [{"key": "reason", "label": "Reason", "items": [{"key": "r:late", "label": "Marking late"}]}],
+        "strip": [{"key": "ready", "label": "Ready to go", "count": 0}],
+        "groups": [{"key": "ready", "label": "Ready to go", "count": 0, "rows": [], "hasrows": false, "reasons": [], "collapsed": false}],
+        "hasrows": true,
+        "empty": "",
+        "freshness": {"text": "Updated just now", "dated": null, "refreshing": false, "preparing": false}
+    }
+}}
+<div class="hub-view" data-region="hub-view-root" data-state="{{state}}" tabindex="-1">
+    {{#freshness.preparing}}
+    <div class="alert alert-info ma-preparing" role="status">{{#str}}preparing, block_le_dashboard{{/str}}</div>
+    {{/freshness.preparing}}
+    <div class="hub-controls" data-region="hub-controls">
+        {{#hasviews}}
+        <div class="hub-control hub-viewpick">
+            <label class="accesshide" for="{{uniqid}}-view">{{#str}}view, block_le_hub_dashboard{{/str}}</label>
+            <select id="{{uniqid}}-view" class="{{selectclass}}" data-action="view">
+                {{#views}}<option value="{{id}}"{{#selected}} selected{{/selected}}>{{name}}</option>{{/views}}
+            </select>
+        </div>
+        {{#view}}
+        <div class="dropdown hub-control hub-viewmenu" data-region="hub-viewmenu">
+            <button type="button" class="btn btn-sm ma-filter-btn dropdown-toggle" id="{{uniqid}}-viewmenu" data-action="viewmenu"
+                    data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{#str}}thisview, block_le_hub_dashboard{{/str}}</button>
+            <div class="dropdown-menu" aria-labelledby="{{uniqid}}-viewmenu">
+                <a class="dropdown-item" href="#" data-action="edit-view">{{#str}}editview, block_le_hub_dashboard{{/str}}</a>
+                <a class="dropdown-item" href="#" data-action="rename-view">{{#str}}renameview, block_le_hub_dashboard{{/str}}</a>
+                <a class="dropdown-item" href="#" data-action="copy-view">{{#str}}copyview, block_le_hub_dashboard{{/str}}</a>
+                <div class="dropdown-divider" role="separator"></div>
+                <a class="dropdown-item hub-danger" href="#" data-action="delete-view" data-label="{{#str}}deleteview, block_le_hub_dashboard{{/str}}"><span data-region="hub-delete-label">{{#str}}deleteview, block_le_hub_dashboard{{/str}}</span></a>
+            </div>
+        </div>
+        {{/view}}
+        {{/hasviews}}
+        <div class="hub-control">
+            <button type="button" class="btn btn-sm ma-filter-btn hub-newview" data-action="new-view">
+                <i class="fa-solid fa-plus ma-icon" aria-hidden="true"></i>{{#str}}newview, block_le_hub_dashboard{{/str}}
+            </button>
+        </div>
+        <div class="hub-control hub-year">
+            <label class="accesshide" for="{{uniqid}}-year">{{#str}}year, block_le_hub_dashboard{{/str}}</label>
+            <select id="{{uniqid}}-year" class="{{selectclass}}" data-action="year">
+                {{#years}}<option value="{{id}}"{{#selected}} selected{{/selected}}>{{label}}</option>{{/years}}
+            </select>
+        </div>
+        <div class="btn-group btn-group-sm hub-control ma-type-filter" role="group" aria-label="{{#str}}type, block_le_hub_dashboard{{/str}}">
+            {{#types}}
+            <button type="button" class="btn ma-filter-btn{{#active}} active{{/active}}" aria-pressed="{{#active}}true{{/active}}{{^active}}false{{/active}}"
+                    data-action="filter-type" data-type="{{key}}">{{label}}</button>
+            {{/types}}
+        </div>
+        <div class="hub-control hub-find" data-region="hub-find">
+            <label class="accesshide" for="{{uniqid}}-find">{{#str}}find, block_le_hub_dashboard{{/str}}</label>
+            <div class="input-group input-group-sm">
+                <span class="input-group-text" aria-hidden="true"><i class="fa-solid fa-magnifying-glass"></i></span>
+                <input type="search" id="{{uniqid}}-find" class="form-control" data-action="find" autocomplete="off"
+                       placeholder="{{#str}}find_placeholder, block_le_hub_dashboard{{/str}}" aria-autocomplete="list"
+                       aria-controls="{{uniqid}}-suggest" aria-expanded="false">
+            </div>
+            <div class="hub-suggest" id="{{uniqid}}-suggest" data-region="hub-suggest" role="listbox" aria-label="{{#str}}find, block_le_hub_dashboard{{/str}}" hidden></div>
+        </div>
+        <div class="dropdown hub-control hub-filter" data-region="hub-filter">
+            <button type="button" class="btn btn-sm ma-filter-btn dropdown-toggle" id="{{uniqid}}-filter" data-action="filter-menu"
+                    data-toggle="dropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-haspopup="true" aria-expanded="false">
+                <i class="fa-solid fa-filter ma-icon" aria-hidden="true"></i><span data-region="hub-filter-label">{{#str}}filter, block_le_hub_dashboard{{/str}}</span>
+            </button>
+            <div class="dropdown-menu hub-filter-menu" aria-labelledby="{{uniqid}}-filter" data-region="hub-filter-menu">
+                {{#filters}}
+                <div class="hub-filter-group" role="group" aria-labelledby="{{uniqid}}-fg-{{key}}">
+                    <div class="dropdown-header hub-filter-heading" id="{{uniqid}}-fg-{{key}}">{{label}}</div>
+                    {{#items}}
+                    <label class="dropdown-item hub-filter-item">
+                        <input type="checkbox" class="hub-filter-check" data-filter="{{key}}" data-label="{{label}}"> {{label}}
+                    </label>
+                    {{/items}}
+                </div>
+                {{/filters}}
+            </div>
+        </div>
+        <div class="hub-spacer"></div>
+        <div class="ma-freshness hub-control hub-freshness" data-region="ma-freshness">
+            {{#freshness.refreshing}}
+            <span class="ma-freshness-text">
+                <span class="spinner-border spinner-border-sm ma-icon" aria-hidden="true"></span>{{#str}}refreshing, block_le_dashboard{{/str}}
+            </span>
+            {{/freshness.refreshing}}
+            {{^freshness.refreshing}}
+            <span class="ma-freshness-text">{{#freshness.dated}}{{> block_le_dashboard/datedtext}}{{/freshness.dated}}{{^freshness.dated}}{{freshness.text}}{{/freshness.dated}}</span>
+            <button type="button" class="btn btn-sm ma-btn ma-btn--refresh" data-action="refresh">
+                <i class="fa-solid fa-rotate-right ma-icon" aria-hidden="true"></i>{{#str}}refresh, block_le_hub_dashboard{{/str}}
+            </button>
+            {{/freshness.refreshing}}
+        </div>
+    </div>
+    <div class="hub-chips" data-region="hub-chips"></div>
+    {{#person}}
+    <div class="hub-banner" data-region="hub-banner">
+        <span>{{banner}}</span>
+        <button type="button" class="btn btn-sm ma-btn" data-action="clear-person">{{#str}}clear, block_le_hub_dashboard{{/str}}</button>
+    </div>
+    {{/person}}
+    <div data-region="hub-list">
+        {{#hasrows}}
+        <div class="hub-strip" data-region="hub-strip" role="group" aria-label="{{#str}}statusstrip, block_le_hub_dashboard{{/str}}">
+            {{#strip}}
+            <button type="button" class="hub-strip-pill hub-strip-pill--{{key}}" data-action="jump" data-group="{{key}}">
+                <span class="hub-strip-count" data-region="hub-strip-count">{{count}}</span> {{label}}
+            </button>
+            {{/strip}}
+        </div>
+        <div class="hub-legend" aria-hidden="true">
+            <span class="hub-legend-item hub-legend-item--submitted">{{#str}}seg_submitted, block_le_hub_dashboard{{/str}}</span>
+            <span class="hub-legend-item hub-legend-item--marked">{{#str}}seg_marked, block_le_hub_dashboard{{/str}}</span>
+            <span class="hub-legend-item hub-legend-item--moderated">{{#str}}seg_moderated, block_le_hub_dashboard{{/str}}</span>
+            <span class="hub-legend-item hub-legend-item--sent">{{#str}}seg_sent, block_le_hub_dashboard{{/str}}</span>
+            <span class="hub-legend-item hub-legend-item--released">{{#str}}seg_released, block_le_hub_dashboard{{/str}}</span>
+            <span class="hub-legend-note">{{#str}}legend_of, block_le_hub_dashboard{{/str}}</span>
+        </div>
+        <div class="hub-colhead" aria-hidden="true">
+            <span class="hub-col hub-col--icon"></span>
+            <span class="hub-col hub-col--name">{{#str}}col_assessment, block_le_hub_dashboard{{/str}}</span>
+            <span class="hub-col hub-col--module">{{#str}}col_module, block_le_hub_dashboard{{/str}}</span>
+            <span class="hub-col hub-col--reason">{{#str}}col_reason, block_le_hub_dashboard{{/str}}</span>
+            <span class="hub-col hub-col--status">{{#str}}col_status, block_le_hub_dashboard{{/str}}</span>
+            <span class="hub-col hub-col--progress">{{#str}}col_progress, block_le_hub_dashboard{{/str}}</span>
+            <span class="hub-col hub-col--flags">{{#str}}col_flags, block_le_hub_dashboard{{/str}}</span>
+            <span class="hub-col hub-col--toggle"></span>
+        </div>
+        {{#groups}}{{> block_le_hub_dashboard/group }}{{/groups}}
+        <p class="ma-filter-empty text-muted" data-region="hub-filter-empty" hidden>{{#str}}nomatches, block_le_hub_dashboard{{/str}}</p>
+        {{/hasrows}}
+        {{^hasrows}}
+        <div class="ma-empty text-muted">{{empty}}</div>
+        {{/hasrows}}
+    </div>
+    {{#editor}}{{> block_le_hub_dashboard/editor }}{{/editor}}
+</div>

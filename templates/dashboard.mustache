@@ -1,0 +1,51 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template block_le_hub_dashboard/dashboard
+
+    The Hub dashboard block's root: the loading notice, the screen reader status line, the toast and the view.
+    It takes My assessments' root class, so its rows, flags, popovers and bars share that block's styles; its own
+    layout hangs on .le-hub. JS hooks are data- attributes only.
+
+    Example context (json):
+    {
+        "uniqid": "hub1",
+        "state": "{\"viewid\":1,\"yearid\":0,\"type\":\"summative\",\"personid\":0}",
+        "timezone": "Europe/London",
+        "hoverpopovers": true,
+        "selectclass": "custom-select custom-select-sm",
+        "views": [], "hasviews": false, "view": null, "editor": null, "person": null,
+        "years": [{"id": 0, "label": "All years", "selected": true}],
+        "types": [{"key": "summative", "label": "Summative", "active": true}],
+        "filters": [], "strip": [], "groups": [], "hasrows": false,
+        "empty": "Create a view to start: pick the departments or module codes you look after.",
+        "freshness": {"text": "Updated just now", "dated": null, "refreshing": false, "preparing": false}
+    }
+}}
+<div id="{{uniqid}}" class="block_le_dashboard_dashboard le-hub" data-region="hub" data-timezone="{{timezone}}"{{^hoverpopovers}} data-nohover="1"{{/hoverpopovers}}>
+    <div class="ma-loading alert alert-info" data-region="hub-loading" hidden>
+        <span class="spinner-border spinner-border-sm ma-icon" aria-hidden="true"></span>{{#str}}loading, block_le_hub_dashboard{{/str}}
+    </div>
+    <div class="accesshide" data-region="hub-status" role="status"></div>
+    <div class="hub-toast" data-region="hub-toast" role="status" hidden>
+        <span data-region="hub-toast-text"></span>
+        <button type="button" class="btn btn-sm ma-btn hub-toast-undo" data-action="undo" hidden>{{#str}}undo, block_le_hub_dashboard{{/str}}</button>
+    </div>
+    <div data-region="hub-view">
+        {{> block_le_hub_dashboard/view }}
+    </div>
+</div>

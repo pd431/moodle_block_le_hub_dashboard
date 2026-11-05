@@ -1,0 +1,59 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template block_le_hub_dashboard/group
+
+    One of the four groups (P9): a slim sticky header with the count and each reason's count as a toggle, then
+    the rows. Done starts collapsed. CSS hooks on .hub-group--{key}; JS hooks on data-group.
+
+    Example context (json):
+    {
+        "key": "chase",
+        "label": "Chase",
+        "count": 2,
+        "hasrows": true,
+        "collapsed": false,
+        "reasons": [{"key": "late", "label": "Marking late", "count": 2}],
+        "rows": []
+    }
+}}
+<section class="hub-group hub-group--{{key}}{{#collapsed}} hub-group--collapsed{{/collapsed}}" data-region="hub-group" data-group="{{key}}"{{^hasrows}} hidden{{/hasrows}}>
+    <div class="hub-group-header" data-region="hub-group-header">
+        <button type="button" class="hub-group-toggle" data-action="toggle-group" aria-expanded="{{^collapsed}}true{{/collapsed}}{{#collapsed}}false{{/collapsed}}"
+                aria-controls="hub-group-{{key}}-list">
+            <i class="fa-solid fa-chevron-down hub-chevron" aria-hidden="true"></i>
+            <span class="hub-group-title" id="hub-group-{{key}}-title">{{label}}</span>
+            <span class="badge hub-group-count" data-region="hub-group-count">{{count}}</span>
+            <span class="accesshide">{{#str}}showgroup, block_le_hub_dashboard, {{label}}{{/str}}</span>
+        </button>
+        <div class="hub-group-reasons" data-region="hub-group-reasons">
+            {{#reasons}}
+            <button type="button" class="hub-reason-toggle" data-action="reason" data-reason="{{key}}" aria-pressed="false">
+                {{label}} <span class="hub-reason-count" data-region="hub-reason-count">{{count}}</span>
+            </button>
+            {{/reasons}}
+        </div>
+    </div>
+    <ul class="list-unstyled hub-rows" id="hub-group-{{key}}-list" aria-labelledby="hub-group-{{key}}-title">
+        {{#rows}}
+        <li class="hub-row" id="{{id}}" data-region="hub-row" data-cmid="{{cmid}}" data-assesstype="{{assesstype}}" data-reasons="{{reasonkeys}}"
+            data-flags="{{flagkeys}}" data-search="{{search}}">
+            {{> block_le_hub_dashboard/row }}
+        </li>
+        {{/rows}}
+    </ul>
+</section>
