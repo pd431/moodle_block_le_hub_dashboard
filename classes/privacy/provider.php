@@ -35,7 +35,6 @@ class provider implements
     \core_privacy\local\request\core_userlist_provider,
     \core_privacy\local\request\plugin\provider,
     \core_privacy\local\request\user_preference_provider {
-
     #[\Override]
     public static function get_metadata(collection $collection): collection {
         $collection->add_database_table('block_le_hub_dashboard_view', [
@@ -57,8 +56,10 @@ class provider implements
     public static function get_contexts_for_userid(int $userid): contextlist {
         global $DB;
         $contextlist = new contextlist();
-        if ($DB->record_exists('block_le_hub_dashboard_view', ['userid' => $userid])
-                || $DB->record_exists('block_le_hub_dashboard_note', ['userid' => $userid])) {
+        if (
+            $DB->record_exists('block_le_hub_dashboard_view', ['userid' => $userid])
+                || $DB->record_exists('block_le_hub_dashboard_note', ['userid' => $userid])
+        ) {
             $contextlist->add_system_context();
         }
         return $contextlist;
@@ -81,12 +82,22 @@ class provider implements
             if ($context->contextlevel !== CONTEXT_SYSTEM) {
                 continue;
             }
-            $views = array_values($DB->get_records('block_le_hub_dashboard_view', ['userid' => $userid], 'name',
-                'id, name, allocdays, timecreated'));
-            $notes = array_values($DB->get_records('block_le_hub_dashboard_note', ['userid' => $userid], 'timecreated',
-                'id, cmid, note, escalated, timecreated'));
-            writer::with_context($context)->export_data([get_string('pluginname', 'block_le_hub_dashboard')],
-                (object)['views' => $views, 'notes' => $notes]);
+            $views = array_values($DB->get_records(
+                'block_le_hub_dashboard_view',
+                ['userid' => $userid],
+                'name',
+                'id, name, allocdays, timecreated'
+            ));
+            $notes = array_values($DB->get_records(
+                'block_le_hub_dashboard_note',
+                ['userid' => $userid],
+                'timecreated',
+                'id, cmid, note, escalated, timecreated'
+            ));
+            writer::with_context($context)->export_data(
+                [get_string('pluginname', 'block_le_hub_dashboard')],
+                (object)['views' => $views, 'notes' => $notes]
+            );
         }
     }
 
@@ -95,8 +106,12 @@ class provider implements
         foreach (\block_le_hub_dashboard\local\config::PREFERENCES as $name) {
             $value = get_user_preferences('block_le_hub_dashboard_' . $name, null, $userid);
             if ($value !== null) {
-                writer::export_user_preference('block_le_hub_dashboard', 'block_le_hub_dashboard_' . $name, $value,
-                    get_string('privacy:metadata:preference:' . $name, 'block_le_hub_dashboard'));
+                writer::export_user_preference(
+                    'block_le_hub_dashboard',
+                    'block_le_hub_dashboard_' . $name,
+                    $value,
+                    get_string('privacy:metadata:preference:' . $name, 'block_le_hub_dashboard')
+                );
             }
         }
     }

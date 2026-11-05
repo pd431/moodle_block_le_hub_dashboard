@@ -72,7 +72,7 @@ final class row {
      *
      * @param \stdClass $cm Aggregated index record (query::aggregates()).
      * @param \stdClass $class rules::classify().
-     * @param \stdClass $view The open saved view (for Ignore), or null when the list is one person's.
+     * @param \stdClass|null $view The open saved view (for Ignore), or null when the list is one person's.
      * @param int $now
      * @param int $viewerid
      * @param array $notes The assessment's notes (notes::for_cms()).
@@ -93,8 +93,11 @@ final class row {
         $row = format::row($cm, (string)$cm->courseshortname, 'hub');
         $row['id'] = 'hub-' . $cm->cmid;
         $row['courseid'] = (int)$cm->courseid;
-        $row['coursename'] = format_string($cm->coursefullname, true,
-            ['context' => \context_course::instance($cm->courseid), 'escape' => false]);
+        $row['coursename'] = format_string(
+            $cm->coursefullname,
+            true,
+            ['context' => \context_course::instance($cm->courseid), 'escape' => false]
+        );
         $row['group'] = $class->group;
         $row['reason'] = self::reason($class->reason);
         $row['reasons'] = array_map([self::class, 'reason'], $class->reasons);
@@ -102,8 +105,11 @@ final class row {
         $row['status'] = $personstatus ?? self::status($cm, $class, $now);
         $row['progress'] = self::progress($cm, $class);
         $row['flags'] = self::flags($row, $cm, $notes);
-        $row['flagkeys'] = implode(' ', array_merge(array_column($row['flags'], 'key'),
-            $cm->anonymous ? ['anonymous'] : [], $cm->individual || !empty($cm->pending) ? ['mitigation'] : []));
+        $row['flagkeys'] = implode(' ', array_merge(
+            array_column($row['flags'], 'key'),
+            $cm->anonymous ? ['anonymous'] : [],
+            $cm->individual || !empty($cm->pending) ? ['mitigation'] : []
+        ));
         $row['dates'] = self::dates($cm);
         $row['setup'] = self::setup($cm);
         $row['bars'] = self::bars($cm);
@@ -220,8 +226,11 @@ final class row {
      */
     protected static function days_past(int $time, int $now): string {
         $days = max(1, -format::calendar_days($now, $time));
-        return $days === 1 ? get_string('day_past', 'block_le_hub_dashboard') : get_string('days_past',
-            'block_le_hub_dashboard', $days);
+        return $days === 1 ? get_string('day_past', 'block_le_hub_dashboard') : get_string(
+            'days_past',
+            'block_le_hub_dashboard',
+            $days
+        );
     }
 
     /**
@@ -303,8 +312,13 @@ final class row {
      */
     protected static function counted(string $rowid, string $key, int $count): array {
         $c = 'block_le_hub_dashboard';
-        return self::hint($rowid, $key, get_string('flag_' . $key . ($count === 1 ? '_one' : '_many'), $c, $count),
-            get_string('flag_' . $key . '_text', $c, $count), $count);
+        return self::hint(
+            $rowid,
+            $key,
+            get_string('flag_' . $key . ($count === 1 ? '_one' : '_many'), $c, $count),
+            get_string('flag_' . $key . '_text', $c, $count),
+            $count
+        );
     }
 
     /**
@@ -327,16 +341,24 @@ final class row {
         }
         // The allocation state, before the deadline too (hub-view: Allocation).
         if (!$cm->hasallocation) {
-            $flags[] = self::hint($id, 'noallocation', get_string('flag_noallocation', $c),
-                get_string('flag_noallocation_text', $c));
+            $flags[] = self::hint(
+                $id,
+                'noallocation',
+                get_string('flag_noallocation', $c),
+                get_string('flag_noallocation_text', $c)
+            );
         } else if ($cm->unallocated > 0 && maconfig::shown('hint_unallocated')) {
             $flags[] = self::counted($id, 'unallocated', $cm->unallocated);
         } else if ($cm->unallocated === 0) {
             $flags[] = self::hint($id, 'allocated', get_string('flag_allocated', $c), get_string('flag_allocated_text', $c));
         }
         if ($cm->units > 0 && $cm->unmarked > 0 && empty($cm->markingdue)) {
-            $flags[] = self::hint($id, 'nomarkingdue', get_string('flag_nomarkingdue', $c),
-                get_string('flag_nomarkingdue_text', $c));
+            $flags[] = self::hint(
+                $id,
+                'nomarkingdue',
+                get_string('flag_nomarkingdue', $c),
+                get_string('flag_nomarkingdue_text', $c)
+            );
         }
         if (!empty($cm->flagged)) {
             $flags[] = format::plagiarism_hint($id, (int)$cm->flagged->open, (int)$cm->flagged->withheld);
@@ -463,12 +485,22 @@ final class row {
                 }
             }
             if ($cm->sendstep) {
-                $bars[] = format::bar('sent', get_string('seg_sent', 'block_le_hub_dashboard'), $cm->sent, $cm->tosend,
-                    $cm->isgroup);
+                $bars[] = format::bar(
+                    'sent',
+                    get_string('seg_sent', 'block_le_hub_dashboard'),
+                    $cm->sent,
+                    $cm->tosend,
+                    $cm->isgroup
+                );
             }
             if (empty($cm->norelease)) {
-                $bars[] = format::bar('released', get_string('bar_released', 'block_le_dashboard'), $cm->released,
-                    $cm->units, $cm->isgroup);
+                $bars[] = format::bar(
+                    'released',
+                    get_string('bar_released', 'block_le_dashboard'),
+                    $cm->released,
+                    $cm->units,
+                    $cm->isgroup
+                );
             }
         }
         return $bars;
@@ -486,8 +518,10 @@ final class row {
         $markers = people::markers($cm, $viewerid);
         return ['convenors' => $convenors, 'hasconvenors' => !empty($convenors), 'markers' => $markers['markers'],
             'hasmarkers' => !empty($markers['markers']), 'outstanding' => $markers['outstanding'],
-            'reallocateurl' => $cm->hasallocation ? (new \moodle_url('/mod/' . $cm->modname . '/view.php',
-                ['id' => $cm->cmid, 'action' => 'grading']))->out(false) : null];
+            'reallocateurl' => $cm->hasallocation ? (new \moodle_url(
+                '/mod/' . $cm->modname . '/view.php',
+                ['id' => $cm->cmid, 'action' => 'grading']
+            ))->out(false) : null];
     }
 
     /**

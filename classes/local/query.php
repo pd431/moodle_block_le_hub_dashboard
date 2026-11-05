@@ -135,8 +135,16 @@ final class query {
         $pending = maconfig::shown('hint_extensions') ? marking_rules::pending_extensions($where, $params, $now) : [];
 
         foreach ($cms as $cmid => $cm) {
-            self::aggregate($cm, $students[$cmid] ?? null, $marking[$cmid] ?? [], (int)($unmarked[$cmid] ?? 0),
-                (int)($changedrel[$cmid] ?? 0), $markers[$cmid] ?? [], $flagged[$cmid] ?? null, $pending[$cmid] ?? null);
+            self::aggregate(
+                $cm,
+                $students[$cmid] ?? null,
+                $marking[$cmid] ?? [],
+                (int)($unmarked[$cmid] ?? 0),
+                (int)($changedrel[$cmid] ?? 0),
+                $markers[$cmid] ?? [],
+                $flagged[$cmid] ?? null,
+                $pending[$cmid] ?? null
+            );
         }
         return $cms;
     }

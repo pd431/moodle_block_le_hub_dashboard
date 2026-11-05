@@ -40,10 +40,18 @@ abstract class base extends external_api {
     protected static function state_parameters(): array {
         return [
             'viewid' => new external_value(PARAM_INT, 'Saved view id, 0 for none, -1 for the last used', VALUE_DEFAULT, -1),
-            'yearid' => new external_value(PARAM_INT, 'Academic year id, 0 for all, -1 for the saved or default year',
-                VALUE_DEFAULT, -1),
-            'type' => new external_value(PARAM_ALPHA, 'summative, formative, both or empty for the saved choice',
-                VALUE_DEFAULT, ''),
+            'yearid' => new external_value(
+                PARAM_INT,
+                'Academic year id, 0 for all, -1 for the saved or default year',
+                VALUE_DEFAULT,
+                -1
+            ),
+            'type' => new external_value(
+                PARAM_ALPHA,
+                'summative, formative, both or empty for the saved choice',
+                VALUE_DEFAULT,
+                ''
+            ),
             'personid' => new external_value(PARAM_INT, 'A person whose assessments to show, 0 for none', VALUE_DEFAULT, 0),
         ];
     }
@@ -68,9 +76,13 @@ abstract class base extends external_api {
      * @return dashboard
      */
     protected static function dashboard(int $userid, array $state): dashboard {
-        return new dashboard($userid, $state['viewid'] < 0 ? null : (int)$state['viewid'],
-            $state['yearid'] < 0 ? null : (int)$state['yearid'], $state['type'] === '' ? null : $state['type'],
-            (int)$state['personid']);
+        return new dashboard(
+            $userid,
+            $state['viewid'] < 0 ? null : (int)$state['viewid'],
+            $state['yearid'] < 0 ? null : (int)$state['yearid'],
+            $state['type'] === '' ? null : $state['type'],
+            (int)$state['personid']
+        );
     }
 
     /**

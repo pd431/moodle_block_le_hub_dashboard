@@ -109,8 +109,12 @@ abstract class hub_testcase extends view_testcase {
         global $CFG;
         if (self::$hubsentences === null) {
             $src = file_get_contents($CFG->dirroot . '/blocks/le_hub_dashboard/' . self::HUB_CONTEXT);
-            preg_match_all('~@(?:Given|When|Then) (/.*?/)\n(?:[^\n]*\n)*?\s*public function (\w+)\(~', $src, $matches,
-                PREG_SET_ORDER);
+            preg_match_all(
+                '~@(?:Given|When|Then) (/.*?/)\n(?:[^\n]*\n)*?\s*public function (\w+)\(~',
+                $src,
+                $matches,
+                PREG_SET_ORDER
+            );
             self::$hubsentences = [];
             foreach ($matches as $match) {
                 self::$hubsentences[$match[1]] = $match[2];
@@ -134,7 +138,7 @@ abstract class hub_testcase extends view_testcase {
         }
     }
 
-    // --- Opening the hub ---------------------------------------------------------------------------------
+    // Opening the hub.
 
     #[\Override]
     protected function i_log_in_and_view(string $username, string $view, string $year = ''): void {
@@ -303,8 +307,12 @@ abstract class hub_testcase extends view_testcase {
             throw new failed("No '$text' link in the editor");
         }
         $view = local\views::current($this->viewer);
-        local\views::remove_exception((int)$view->id, $this->viewer, $link->getAttribute('data-kind'),
-            (int)$link->getAttribute('data-value'));
+        local\views::remove_exception(
+            (int)$view->id,
+            $this->viewer,
+            $link->getAttribute('data-kind'),
+            (int)$link->getAttribute('data-value')
+        );
         $this->render_hub();
     }
 
@@ -320,7 +328,7 @@ abstract class hub_testcase extends view_testcase {
         }
     }
 
-    // --- Reading the hub ---------------------------------------------------------------------------------
+    // Reading the hub.
 
     #[\Override]
     protected function row(string $name): \DOMElement {
@@ -460,8 +468,10 @@ abstract class hub_testcase extends view_testcase {
      * @return string[]
      */
     protected function flag_names(string $name): array {
-        return array_map(fn($b) => $b->getAttribute('aria-label'),
-            $this->find_all(".//*[@data-region='hub-row-line']//button[@data-action='tip'][@data-hint]", $this->row($name)));
+        return array_map(
+            fn($b) => $b->getAttribute('aria-label'),
+            $this->find_all(".//*[@data-region='hub-row-line']//button[@data-action='tip'][@data-hint]", $this->row($name))
+        );
     }
 
     /**
@@ -585,8 +595,10 @@ abstract class hub_testcase extends view_testcase {
      * @param string $labels
      */
     protected function expanded_row_should_show_bars(string $name, string $labels): void {
-        $actual = array_map([self::class, 'text'],
-            $this->find_all(".//*[contains(@class, 'hub-detail-bars')]//*[contains(@class, 'ma-bar-label')]", $this->row($name)));
+        $actual = array_map(
+            [self::class, 'text'],
+            $this->find_all(".//*[contains(@class, 'hub-detail-bars')]//*[contains(@class, 'ma-bar-label')]", $this->row($name))
+        );
         if ($actual !== array_map('trim', explode(',', $labels))) {
             throw new failed("'$name' bars are '" . implode(', ', $actual) . "'");
         }
@@ -599,8 +611,10 @@ abstract class hub_testcase extends view_testcase {
      * @param string $convenor
      */
     protected function expanded_row_should_list_convenor(string $name, string $convenor): void {
-        $link = $this->find(".//li[@data-role='convenor']//a[normalize-space(.) = " . self::literal($convenor) . ']',
-            $this->row($name));
+        $link = $this->find(
+            ".//li[@data-role='convenor']//a[normalize-space(.) = " . self::literal($convenor) . ']',
+            $this->row($name)
+        );
         if (!$link || !str_contains($link->getAttribute('href'), '/user/profile.php')) {
             throw new failed("'$name' does not link '$convenor' to a profile");
         }
@@ -650,9 +664,11 @@ abstract class hub_testcase extends view_testcase {
      * @param string $labels
      */
     protected function groups_in_order(string $labels): void {
-        $actual = array_map([self::class, 'text'],
+        $actual = array_map(
+            [self::class, 'text'],
             $this->find_all("//*[contains(@class, " .
-                "'block_le_hub_dashboard')]//section[@data-region='hub-group']//*[contains(@class, 'hub-group-title')]"));
+            "'block_le_hub_dashboard')]//section[@data-region='hub-group']//*[contains(@class, 'hub-group-title')]")
+        );
         if ($actual !== array_map('trim', explode(',', $labels))) {
             throw new failed("Groups are '" . implode(', ', $actual) . "'");
         }
@@ -701,8 +717,10 @@ abstract class hub_testcase extends view_testcase {
      * @param string $names
      */
     protected function group_should_list(string $group, string $names): void {
-        $actual = array_map([self::class, 'text'],
-            $this->find_all(".//li[@data-region='hub-row']//a[contains(@class, 'hub-row-name')]", $this->group($group)));
+        $actual = array_map(
+            [self::class, 'text'],
+            $this->find_all(".//li[@data-region='hub-row']//a[contains(@class, 'hub-row-name')]", $this->group($group))
+        );
         if ($actual !== array_map('trim', explode(',', $names))) {
             throw new failed("The '$group' group lists '" . implode(', ', $actual) . "'");
         }
@@ -726,9 +744,11 @@ abstract class hub_testcase extends view_testcase {
      * @param string $names
      */
     protected function row_columns_should_be(string $names): void {
-        $actual = array_values(array_filter(array_map([self::class, 'text'],
+        $actual = array_values(array_filter(array_map(
+            [self::class, 'text'],
             $this->find_all("//*[contains(@class, 'block_le_hub_dashboard')]//*[contains(@class, " .
-                "'hub-colhead')]/*[contains(@class, 'hub-col')]"))));
+            "'hub-colhead')]/*[contains(@class, 'hub-col')]")
+        )));
         if ($actual !== array_map('trim', explode(',', $names))) {
             throw new failed("The columns are '" . implode(', ', $actual) . "'");
         }
@@ -763,8 +783,10 @@ abstract class hub_testcase extends view_testcase {
      * @param string $groups
      */
     protected function filter_list_groups(string $groups): void {
-        $actual = array_map([self::class, 'text'],
-            $this->find_all("//*[contains(@class, 'block_le_hub_dashboard')]//*[contains(@class, 'hub-filter-heading')]"));
+        $actual = array_map(
+            [self::class, 'text'],
+            $this->find_all("//*[contains(@class, 'block_le_hub_dashboard')]//*[contains(@class, 'hub-filter-heading')]")
+        );
         if ($actual !== array_map('trim', explode(',', $groups))) {
             throw new failed("The Filter list has the groups '" . implode(', ', $actual) . "'");
         }
@@ -778,8 +800,10 @@ abstract class hub_testcase extends view_testcase {
      * @param string $where
      */
     protected function collapsed_row_should_link(string $name, string $text, string $where): void {
-        $link = $this->find(".//*[@data-region='hub-row-line']//a[normalize-space(.) = " . self::literal($text) . ']',
-            $this->row($name));
+        $link = $this->find(
+            ".//*[@data-region='hub-row-line']//a[normalize-space(.) = " . self::literal($text) . ']',
+            $this->row($name)
+        );
         $needle = $where === 'activity' ? '/mod/' : '/course/view.php';
         if (!$link || !str_contains($link->getAttribute('href'), $needle)) {
             throw new failed("'$text' does not link to the $where page");

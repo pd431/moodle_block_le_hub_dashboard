@@ -25,7 +25,7 @@ use renderer_base;
  * @copyright  2026 Pierre Camaly de Brosses - University of Exeter
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class dashboard implements \templatable, \renderable {
+class dashboard implements \renderable, \templatable {
     /** @var int */
     protected int $userid;
 

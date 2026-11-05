@@ -104,8 +104,15 @@ final class groups_test extends hub_testcase {
      * @param string $group
      * @param string $reason
      */
-    public function test_each_assessment_goes_in_the_group_that_says_whose_turn_it_is(string $type, string $allocation, string $due,
-            string $markingdue, string $state, string $group, string $reason): void {
+    public function test_each_assessment_goes_in_the_group_that_says_whose_turn_it_is(
+        string $type,
+        string $allocation,
+        string $due,
+        string $markingdue,
+        string $state,
+        string $group,
+        string $reason
+    ): void {
         $this->background();
         $this->step("Given a summative \"$type\" \"Lab report\" in \"BIO1\"$allocation was due \"$due\" " .
             "with marking due \"$markingdue\"");

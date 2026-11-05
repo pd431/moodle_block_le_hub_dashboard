@@ -38,8 +38,12 @@ class add_note extends base {
         return new external_function_parameters([
             'cmid' => new external_value(PARAM_INT, 'The assessment'),
             'note' => new external_value(PARAM_TEXT, 'The note'),
-            'escalated' => new external_value(PARAM_BOOL, 'Whether it records that late marks were escalated',
-                VALUE_DEFAULT, false),
+            'escalated' => new external_value(
+                PARAM_BOOL,
+                'Whether it records that late marks were escalated',
+                VALUE_DEFAULT,
+                false
+            ),
         ] + self::state_parameters());
     }
 
@@ -55,8 +59,15 @@ class add_note extends base {
      * @param int $personid
      * @return array
      */
-    public static function execute(int $cmid, string $note, bool $escalated = false, int $viewid = -1, int $yearid = -1,
-            string $type = '', int $personid = 0): array {
+    public static function execute(
+        int $cmid,
+        string $note,
+        bool $escalated = false,
+        int $viewid = -1,
+        int $yearid = -1,
+        string $type = '',
+        int $personid = 0
+    ): array {
         global $DB;
         $p = self::validate_parameters(self::execute_parameters(), ['cmid' => $cmid, 'note' => $note, 'escalated' => $escalated,
             'viewid' => $viewid, 'yearid' => $yearid, 'type' => $type, 'personid' => $personid]);

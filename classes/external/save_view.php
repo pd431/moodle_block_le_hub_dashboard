@@ -40,9 +40,12 @@ class save_view extends base {
             'action' => new external_value(PARAM_ALPHA, 'create, copy, rename, delete, shape or allocdays'),
             'viewid' => new external_value(PARAM_INT, 'The view (the source, for copy)', VALUE_DEFAULT, 0),
             'name' => new external_value(PARAM_TEXT, 'The name, for create, copy and rename', VALUE_DEFAULT, ''),
-            'rules' => new external_value(PARAM_RAW,
+            'rules' => new external_value(
+                PARAM_RAW,
                 'JSON {cat: [ids], starts: [codes], contains: [codes], course: [ids]}, for shape',
-                VALUE_DEFAULT, ''),
+                VALUE_DEFAULT,
+                ''
+            ),
             'allocdays' => new external_value(PARAM_INT, 'The allocation window, for allocdays', VALUE_DEFAULT, -1),
         ] + self::state_parameters());
     }
@@ -61,16 +64,27 @@ class save_view extends base {
      * @param int $personid
      * @return array
      */
-    public static function execute(string $action, int $viewid = 0, string $name = '', string $rules = '', int $allocdays = -1,
-            int $stateviewid = -1, int $yearid = -1, string $type = '', int $personid = 0): array {
+    public static function execute(
+        string $action,
+        int $viewid = 0,
+        string $name = '',
+        string $rules = '',
+        int $allocdays = -1,
+        int $stateviewid = -1,
+        int $yearid = -1,
+        string $type = '',
+        int $personid = 0
+    ): array {
         $p = self::validate_parameters(self::execute_parameters(), ['action' => $action, 'viewid' => $viewid, 'name' => $name,
             'rules' => $rules, 'allocdays' => $allocdays, 'yearid' => $yearid, 'type' => $type, 'personid' => $personid]);
         $userid = self::user();
         $open = (int)$p['viewid'];
         switch ($p['action']) {
             case 'create':
-                $open = views::create($userid, $p['name'] !== '' ? $p['name'] : get_string('newview_name',
-                    'block_le_hub_dashboard'));
+                $open = views::create($userid, $p['name'] !== '' ? $p['name'] : get_string(
+                    'newview_name',
+                    'block_le_hub_dashboard'
+                ));
                 break;
             case 'copy':
                 $open = views::create($userid, $p['name'], (int)$p['viewid']);

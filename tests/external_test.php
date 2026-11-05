@@ -57,8 +57,15 @@ final class external_test extends \advanced_testcase {
         $this->gen = $this->getDataGenerator()->get_plugin_generator('block_le_hub_dashboard');
         \block_le_dashboard\fixture\steps::reset();
         $this->gen->hub_fixtures();
-        $this->gen->assessment_with_marking_due('summative', 'assign', 'Problem sheet 4', 'MTH2003', '', '20 days ago',
-            '2 days ago');
+        $this->gen->assessment_with_marking_due(
+            'summative',
+            'assign',
+            'Problem sheet 4',
+            'MTH2003',
+            '',
+            '20 days ago',
+            '2 days ago'
+        );
         $this->gen->picked_categories('hub1', 'Faculty of Science');
         \block_le_dashboard\fixture\steps::instance()->catch_up();
         $this->setUser(\block_le_dashboard\fixture\steps::userid('hub1'));
@@ -85,8 +92,10 @@ final class external_test extends \advanced_testcase {
         $this->assertSame((int)views::current((int)$this->user()->id)->id, $state['viewid']);
 
         $marker = \block_le_dashboard\fixture\steps::userid('marker1');
-        [$html, $state] = self::reply(external_api::clean_returnvalue(get_view::execute_returns(),
-            get_view::execute(-1, -1, 'both', $marker)));
+        [$html, $state] = self::reply(external_api::clean_returnvalue(
+            get_view::execute_returns(),
+            get_view::execute(-1, -1, 'both', $marker)
+        ));
         $this->assertSame($marker, $state['personid']);
         $this->assertSame('both', $state['type']);
         $this->assertStringContainsString('Mo Marker', $html);
@@ -111,36 +120,42 @@ final class external_test extends \advanced_testcase {
         $mth = $DB->get_field('course', 'id', ['shortname' => 'MTH2003']);
         $arts = $DB->get_field('course_categories', 'id', ['idnumber' => 'ART']);
 
-        [, $state] = self::reply(external_api::clean_returnvalue(save_view::execute_returns(),
-            save_view::execute('create', 0, 'Arts team')));
-        $arts_id = $state['viewid'];
-        $this->assertSame('Arts team', views::get($arts_id, $userid)->name);
+        [, $state] = self::reply(external_api::clean_returnvalue(
+            save_view::execute_returns(),
+            save_view::execute('create', 0, 'Arts team')
+        ));
+        $artsid = $state['viewid'];
+        $this->assertSame('Arts team', views::get($artsid, $userid)->name);
 
-        save_view::execute('shape', $arts_id, '', json_encode(['cat' => [$arts], 'starts' => ['MTH2'], 'contains' => [],
+        save_view::execute('shape', $artsid, '', json_encode(['cat' => [$arts], 'starts' => ['MTH2'], 'contains' => [],
             'course' => ['his1']]));
-        $view = views::get($arts_id, $userid);
+        $view = views::get($artsid, $userid);
         $this->assertSame([(int)$arts], $view->cat);
         $this->assertSame(['MTH2'], $view->starts);
         $this->assertSame([(int)$DB->get_field('course', 'id', ['shortname' => 'HIS1'])], $view->course);
 
-        save_view::execute('allocdays', $arts_id, '', '', 14);
-        $this->assertSame(14, (int)views::get($arts_id, $userid)->allocdays);
+        save_view::execute('allocdays', $artsid, '', '', 14);
+        $this->assertSame(14, (int)views::get($artsid, $userid)->allocdays);
 
-        [, $state] = self::reply(external_api::clean_returnvalue(save_view::execute_returns(),
-            save_view::execute('copy', $arts_id, 'Arts team (copy)')));
-        $this->assertNotSame($arts_id, $state['viewid']);
+        [, $state] = self::reply(external_api::clean_returnvalue(
+            save_view::execute_returns(),
+            save_view::execute('copy', $artsid, 'Arts team (copy)')
+        ));
+        $this->assertNotSame($artsid, $state['viewid']);
         $this->assertSame(['MTH2'], views::get($state['viewid'], $userid)->starts);
 
         save_view::execute('rename', $state['viewid'], 'Humanities');
         $this->assertSame('Humanities', views::get($state['viewid'], $userid)->name);
 
-        [, $after] = self::reply(external_api::clean_returnvalue(save_view::execute_returns(),
-            save_view::execute('delete', $state['viewid'])));
+        [, $after] = self::reply(external_api::clean_returnvalue(
+            save_view::execute_returns(),
+            save_view::execute('delete', $state['viewid'])
+        ));
         $this->assertNull(views::get($state['viewid'], $userid));
         $this->assertNotSame($state['viewid'], $after['viewid']);
 
         $this->expectException(\moodle_exception::class);
-        save_view::execute('shape', $arts_id, '', json_encode(['course' => ['NOPE']]));
+        save_view::execute('shape', $artsid, '', json_encode(['course' => ['NOPE']]));
     }
 
     /**
@@ -164,8 +179,10 @@ final class external_test extends \advanced_testcase {
     public function test_add_note(): void {
         $this->hub();
         $cm = \block_le_dashboard\fixture\steps::instance()->cm('Problem sheet 4');
-        [$html] = self::reply(external_api::clean_returnvalue(add_note::execute_returns(),
-            add_note::execute((int)$cm->id, 'Mo off sick', true)));
+        [$html] = self::reply(external_api::clean_returnvalue(
+            add_note::execute_returns(),
+            add_note::execute((int)$cm->id, 'Mo off sick', true)
+        ));
         $this->assertStringContainsString('Mo off sick', $html);
         $notes = notes::for_cms([(int)$cm->id])[(int)$cm->id];
         $this->assertCount(1, $notes);

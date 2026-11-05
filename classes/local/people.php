@@ -56,11 +56,15 @@ final class people {
             'students' => "SELECT DISTINCT s.userid AS id FROM {block_le_dashboard_stu} s",
         ];
         foreach ($sources as $kind => $ids) {
-            $records = $DB->get_records_sql("SELECT u.id $fields
+            $records = $DB->get_records_sql(
+                "SELECT u.id $fields
                                                FROM {user} u
                                               WHERE u.deleted = 0 AND u.id IN ($ids) AND $like
-                                           ORDER BY u.lastname, u.firstname", ['name' => '%' . $DB->sql_like_escape($text) . '%'],
-                0, self::FIND_LIMIT);
+                                           ORDER BY u.lastname, u.firstname",
+                ['name' => '%' . $DB->sql_like_escape($text) . '%'],
+                0,
+                self::FIND_LIMIT
+            );
             $out[$kind] = array_values(array_map(fn($u) => ['id' => (int)$u->id, 'name' => fullname($u)], $records));
         }
         return $out;
@@ -182,8 +186,10 @@ final class people {
                 $bars[] = format::bar($stage, format::stage($stage), (int)$r->marked, (int)$r->ready);
                 $todo += max(0, (int)$r->ready - (int)$r->marked);
             }
-            if ($todo > 0 && $user && empty($user->deleted) && validate_email($user->email)
-                    && ($canseeemail || (int)$user->maildisplay !== \core_user::MAILDISPLAY_HIDE)) {
+            if (
+                $todo > 0 && $user && empty($user->deleted) && validate_email($user->email)
+                    && ($canseeemail || (int)$user->maildisplay !== \core_user::MAILDISPLAY_HIDE)
+            ) {
                 $emails[] = $user->email;
             }
             $markers[] = ['name' => $name, 'url' => $user ? self::profile((int)$markerid) : null, 'bars' => $bars,

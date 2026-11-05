@@ -212,8 +212,13 @@ final class views {
                 $out[] = $value;
                 continue;
             }
-            $id = $DB->get_field_select('course', 'id', $DB->sql_equal('shortname', ':code', false), ['code' => $value],
-                IGNORE_MULTIPLE);
+            $id = $DB->get_field_select(
+                'course',
+                'id',
+                $DB->sql_equal('shortname', ':code', false),
+                ['code' => $value],
+                IGNORE_MULTIPLE
+            );
             if (!$id) {
                 throw new \moodle_exception('editor_nocode', 'block_le_hub_dashboard', '', $value);
             }
@@ -392,8 +397,10 @@ final class views {
         global $DB;
         [$where, $params] = self::courses_sql($view);
         $total = $DB->count_records_select('course', 'id <> :site', ['site' => SITEID]);
-        $in = $DB->count_records_sql("SELECT COUNT(1) FROM {course} co WHERE co.id <> :site AND $where",
-            $params + ['site' => SITEID]);
+        $in = $DB->count_records_sql(
+            "SELECT COUNT(1) FROM {course} co WHERE co.id <> :site AND $where",
+            $params + ['site' => SITEID]
+        );
         return [$in, $total];
     }
 
