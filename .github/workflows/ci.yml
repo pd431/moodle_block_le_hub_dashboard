@@ -65,7 +65,7 @@ jobs:
       # hub needs) is on this branch until it merges; then this becomes main.
       - name: Install moodle-plugin-ci
         run: |
-          moodle-plugin-ci add-plugin pd431/moodle_block_le_dashboard --branch claude/project-thread-mz1twr
+          moodle-plugin-ci add-plugin pd431/moodle_block_le_dashboard --branch main
           moodle-plugin-ci install --plugin ./plugin --db-host=127.0.0.1
         env:
           DB: ${{ matrix.database }}
