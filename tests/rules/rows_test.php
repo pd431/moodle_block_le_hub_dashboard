@@ -182,6 +182,19 @@ final class rows_test extends hub_testcase {
     }
 
     /**
+     * An academic conduct flag is a coursework's, and its words are in the popover too.
+     */
+    public function test_an_academic_conduct_flag_is_a_courseworks(): void {
+        $this->background();
+        $this->step('Given a summative "coursework" "Lab report" in "BIO1" was due "10 days ago" with marking due "in 10 days"');
+        $this->step('And "student1" has submitted "Lab report"');
+        $this->step('And the submission of "student1" for "Lab report" is flagged for an academic conduct check');
+        $this->step('When I log in as "hub1" and view the "Hub dashboard"');
+        $this->step('Then the collapsed row "Lab report" should show the icon flags "1 flagged, No allocation"');
+        $this->step('And the collapsed row "Lab report" should not show the text "flagged"');
+    }
+
+    /**
      * Set-up is in the expanded row only, except the allocation state which stays as an icon.
      *
      * @return array[]
@@ -209,9 +222,14 @@ final class rows_test extends hub_testcase {
      * @param string $setup
      * @param string $collapsed
      * @param string $expanded
+     * @param string $also
      */
-    public function test_setup_is_in_the_expanded_row_only(string $setup, string $collapsed, string $expanded,
-            string $also = ''): void {
+    public function test_setup_is_in_the_expanded_row_only(
+        string $setup,
+        string $collapsed,
+        string $expanded,
+        string $also = ''
+    ): void {
         $this->background();
         $this->step("Given $setup");
         if ($also !== '') {
@@ -375,8 +393,11 @@ final class rows_test extends hub_testcase {
      * @param string $allocated
      * @param string $flag
      */
-    public function test_every_assessment_says_whether_markers_are_allocated(string $allocation, string $allocated,
-        string $flag): void {
+    public function test_every_assessment_says_whether_markers_are_allocated(
+        string $allocation,
+        string $allocated,
+        string $flag
+    ): void {
         $this->step('Given the hub fixtures from hub-view.feature exist');
         $this->step("And a summative \"assign\" \"Lab report\" in \"BIO1\"$allocation is due \"in 5 days\"");
         $this->step("And $allocated");

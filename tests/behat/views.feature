@@ -81,9 +81,9 @@ Feature: Hub staff shape what they see with saved views, and ignore what is not 
     Then I should see "Click again to confirm" in the "Hub dashboard" block
     And I should see "Problem sheet 4" in the "Hub dashboard" block
     When I click on "Click again to confirm" "link" in the "Hub dashboard" "block"
-    Then I should not see "Problem sheet 4" in the "Hub dashboard" block
+    Then there should not be a hub row "Problem sheet 4"
     And I should see "Problem sheet 5" in the "Hub dashboard" block
-    And I should see "taken out of Science team" in the "Hub dashboard" block
+    And I should see "Problem sheet 4 taken out of Science team" in the "Hub dashboard" block
     When I click on "Undo" "button" in the "Hub dashboard" "block"
     Then I should see "Problem sheet 4" in the "Hub dashboard" block
     When I expand the row "Problem sheet 4"

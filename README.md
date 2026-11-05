@@ -39,3 +39,9 @@ WCAG ratio and APCA lightness contrast.
 ## Documentation
 
 DECISIONS.md (why), ARCHITECTURE.md (where each rule lives), CONTRAST.md (colour).
+
+## Releasing
+
+Work goes on a branch, where CI runs on every push (it installs My assessments from its `main`). When CI is green,
+the branch is pushed to `main`; nothing goes to `main` red. Each build on `main` is tagged `v<release>` from
+`version.php` by `.github/workflows/tag.yml`, which never moves a tag: a broken tagged build gets a new beta.

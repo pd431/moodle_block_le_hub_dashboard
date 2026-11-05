@@ -65,8 +65,14 @@ final class dashboard {
      * @param int|null $personid A person whose assessments replace the view's (P2), 0 for none.
      * @param int|null $now
      */
-    public function __construct(int $userid, ?int $viewid = null, ?int $yearid = null, ?string $type = null,
-            ?int $personid = null, ?int $now = null) {
+    public function __construct(
+        int $userid,
+        ?int $viewid = null,
+        ?int $yearid = null,
+        ?string $type = null,
+        ?int $personid = null,
+        ?int $now = null
+    ) {
         $this->userid = $userid;
         $this->now = $now ?? maconfig::now();
         $this->view = $viewid === null ? views::current($userid) : ($viewid ? views::get($viewid, $userid) : null);
@@ -151,8 +157,16 @@ final class dashboard {
         $oldest = null;
         foreach ($cms as $cmid => $cm) {
             $class = rules::classify($cm, $this->now, $riskdays, $allocdays);
-            $groups[$class->group][] = row::build($cm, $class, $this->personid ? null : $this->view, $this->now, $this->userid,
-                $notes[$cmid] ?? [], $convenors[$cm->courseid] ?? [], $statuses[$cmid] ?? null);
+            $groups[$class->group][] = row::build(
+                $cm,
+                $class,
+                $this->personid ? null : $this->view,
+                $this->now,
+                $this->userid,
+                $notes[$cmid] ?? [],
+                $convenors[$cm->courseid] ?? [],
+                $statuses[$cmid] ?? null
+            );
             $oldest = $oldest === null ? (int)$cm->timeindexed : min($oldest, (int)$cm->timeindexed);
         }
         $sections = [];
@@ -183,15 +197,20 @@ final class dashboard {
             'selectclass' => format::select_class(),
             'views' => $this->views(),
             'hasviews' => (bool)views::all($this->userid),
-            'view' => $this->view ? ['id' => (int)$this->view->id, 'name' => format_string($this->view->name, true,
-                ['escape' => false]),
+            'view' => $this->view ? ['id' => (int)$this->view->id, 'name' => format_string(
+                $this->view->name,
+                true,
+                ['escape' => false]
+            ),
                 'allocdays' => (int)$this->view->allocdays] : null,
             'editor' => $this->view ? $this->editor() : null,
             'person' => $person ? ['id' => (int)$person->id, 'name' => $personname,
                 'banner' => get_string('personscope', $c, $personname)] : null,
             'years' => $this->years(),
-            'types' => array_map(fn($t) => ['key' => $t, 'label' => get_string($t, $c), 'active' => $t === $this->type],
-                self::TYPES),
+            'types' => array_map(
+                fn($t) => ['key' => $t, 'label' => get_string($t, $c), 'active' => $t === $this->type],
+                self::TYPES
+            ),
             'type' => $this->type,
             'filters' => $this->filters(),
             'strip' => $strip,
@@ -274,10 +293,20 @@ final class dashboard {
         if ($view->outcm) {
             global $DB;
             [$insql, $params] = $DB->get_in_or_equal($view->outcm, SQL_PARAMS_NAMED);
-            foreach ($DB->get_records_select('block_le_dashboard_cm', "cmid $insql", $params, 'name',
-                'cmid, name, courseid') as $cm) {
-                $outcms[] = ['id' => (int)$cm->cmid, 'name' => format_string($cm->name, true,
-                    ['context' => \context_course::instance($cm->courseid), 'escape' => false])];
+            foreach (
+                $DB->get_records_select(
+                    'block_le_dashboard_cm',
+                    "cmid $insql",
+                    $params,
+                    'name',
+                    'cmid, name, courseid'
+                ) as $cm
+            ) {
+                $outcms[] = ['id' => (int)$cm->cmid, 'name' => format_string(
+                    $cm->name,
+                    true,
+                    ['context' => \context_course::instance($cm->courseid), 'escape' => false]
+                )];
             }
         }
         [$in, $total] = views::module_counts($view);

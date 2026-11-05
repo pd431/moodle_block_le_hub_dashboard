@@ -117,18 +117,27 @@ final class rules_test extends \advanced_testcase {
         $d = DAYSECS;
         $late = self::aggregates(['markingdue' => self::NOW - 3 * $d]);
         $later = self::aggregates(['markingdue' => self::NOW - $d]);
-        $this->assertLessThan(rules::sort_key($later, rules::classify($later, self::NOW, 5, 30)),
-            rules::sort_key($late, rules::classify($late, self::NOW, 5, 30)), 'the latest marking first in Chase');
+        $this->assertLessThan(
+            rules::sort_key($later, rules::classify($later, self::NOW, 5, 30)),
+            rules::sort_key($late, rules::classify($late, self::NOW, 5, 30)),
+            'the latest marking first in Chase'
+        );
 
         $soon = self::aggregates(['unmarked' => 0, 'due' => self::NOW - 5 * $d]);
         $sooner = self::aggregates(['unmarked' => 0, 'due' => self::NOW - 8 * $d]);
-        $this->assertLessThan(rules::sort_key($soon, rules::classify($soon, self::NOW, 5, 30)),
-            rules::sort_key($sooner, rules::classify($sooner, self::NOW, 5, 30)), 'the earliest deadline first in Ready');
+        $this->assertLessThan(
+            rules::sort_key($soon, rules::classify($soon, self::NOW, 5, 30)),
+            rules::sort_key($sooner, rules::classify($sooner, self::NOW, 5, 30)),
+            'the earliest deadline first in Ready'
+        );
 
         $old = self::aggregates(['unmarked' => 0, 'released' => 2, 'timereleased' => self::NOW - 9 * $d]);
         $new = self::aggregates(['unmarked' => 0, 'released' => 2, 'timereleased' => self::NOW - $d]);
-        $this->assertLessThan(rules::sort_key($old, rules::classify($old, self::NOW, 5, 30)),
-            rules::sort_key($new, rules::classify($new, self::NOW, 5, 30)), 'the latest release first in Done');
+        $this->assertLessThan(
+            rules::sort_key($old, rules::classify($old, self::NOW, 5, 30)),
+            rules::sort_key($new, rules::classify($new, self::NOW, 5, 30)),
+            'the latest release first in Done'
+        );
     }
 
     /**
@@ -172,8 +181,11 @@ final class rules_test extends \advanced_testcase {
             $label = json_encode($m) . json_encode($s);
             $this->assertSame(rules::is_early($m), in_array($id, $early), "early: $label");
             $this->assertSame(rules::is_changed_since_sent($m), in_array($id, $changedsent), "changed since sent: $label");
-            $this->assertSame(rules::is_changed_since_released($m, $s), in_array($id, $changedrel),
-                "changed since released: $label");
+            $this->assertSame(
+                rules::is_changed_since_released($m, $s),
+                in_array($id, $changedrel),
+                "changed since released: $label"
+            );
         }
         $this->assertNotEmpty($early);
         $this->assertNotEmpty($changedsent);

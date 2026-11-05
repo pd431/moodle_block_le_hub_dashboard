@@ -54,8 +54,15 @@ class ignore extends base {
      * @param int $personid
      * @return array
      */
-    public static function execute(string $kind, int $value, bool $undo = false, int $viewid = -1, int $yearid = -1,
-            string $type = '', int $personid = 0): array {
+    public static function execute(
+        string $kind,
+        int $value,
+        bool $undo = false,
+        int $viewid = -1,
+        int $yearid = -1,
+        string $type = '',
+        int $personid = 0
+    ): array {
         $p = self::validate_parameters(self::execute_parameters(), ['kind' => $kind, 'value' => $value, 'undo' => $undo,
             'viewid' => $viewid, 'yearid' => $yearid, 'type' => $type, 'personid' => $personid]);
         $userid = self::user();

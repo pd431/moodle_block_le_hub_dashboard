@@ -81,3 +81,11 @@ series in particular) cover what its index records for the hub.
 - Assign has no separate release time: the gradebook's release time is the grade's last change, so "Changed since
   released" can never show for assign until the index keeps the first release time. Coursework (first published)
   does carry it.
+- The Dashboard is a limited-width page in Boost (`body.limitedwidth`, content 830px), so the block is 782px wide
+  there at any window size: narrower than the one-line row of P5 needs. At that width the row is two lines (name,
+  module, reason and flags, then status and progress) and the column header is hidden; the one-line row and header
+  appear where the block is wider than 992px. Squeezing eight columns into 782px would wrap the status sentence, so
+  the two-line form is kept there (to confirm with Pierre, 2026-11-05).
+- Behat runs its browser against Moodle's own JavaScript waits: `core/ajax` does not register pending work in 4.5,
+  so the hub's script registers its own (`core/pending`) around every service call and timer, or the steps that
+  follow a click would read the page before the list had changed.

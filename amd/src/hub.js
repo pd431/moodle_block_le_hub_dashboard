@@ -30,6 +30,7 @@ import Ajax from 'core/ajax';
 import Notification from 'core/notification';
 import {getString, getStrings} from 'core/str';
 import {setUserPreference} from 'core_user/repository';
+import Pending from 'core/pending';
 import {localise} from 'block_le_dashboard/localtime';
 import {Tips} from 'block_le_dashboard/tips';
 
@@ -103,6 +104,8 @@ class Hub {
         this.toastTimer = null;
         this.findTimer = null;
         this.saveTimer = null;
+        // What a test runner waits for while a timer runs (core/pending), by timer.
+        this.waiting = {};
         this.suggestIndex = -1;
         root.addEventListener('click', e => this.click(e));
         // Opening an Ignore menu or the view menu again puts an unconfirmed item back. Captured, because
@@ -145,13 +148,18 @@ class Hub {
      * @param {HTMLElement|null} where
      */
     disarm(where) {
-        (where || this.root).querySelectorAll('[data-armed]').forEach(item => {
+        const armed = (where || this.root).querySelectorAll('[data-armed]');
+        armed.forEach(item => {
             const label = item.querySelector('[data-region="hub-ignore-label"], [data-region="hub-delete-label"]');
             if (label && item.dataset.label) {
                 label.textContent = item.dataset.label;
             }
             delete item.dataset.armed;
         });
+        if (armed.length) {
+            // The "click again" announcement is over.
+            this.say('');
+        }
     }
 
     /**
@@ -213,6 +221,8 @@ class Hub {
             'cancel-note': () => this.showNoteForm(target.closest(SELECTORS.row), false),
             'ignore': () => {
                 e.preventDefault();
+                // The first click arms the item in place: the menu must stay open for the second.
+                e.stopPropagation();
                 this.ignore(target);
             },
             'undo': () => this.undoIgnore(),
@@ -271,15 +281,44 @@ class Hub {
         const action = e.target.dataset.action;
         if (action === 'find') {
             clearTimeout(this.findTimer);
+            this.settle('find');
             const text = e.target.value.trim();
             if (text.length < 2) {
                 this.closeSuggest();
                 return;
             }
-            this.findTimer = setTimeout(() => this.suggest(text), FIND_DELAY);
+            this.wait('find');
+            this.findTimer = setTimeout(() => this.suggest(text).finally(() => this.settle('find')), FIND_DELAY);
         } else if (action === 'shape' && e.target.dataset.kind === 'codevalue') {
             clearTimeout(this.saveTimer);
-            this.saveTimer = setTimeout(() => this.saveShape(), SAVE_DELAY);
+            this.settle('save');
+            this.wait('save');
+            this.saveTimer = setTimeout(() => {
+                this.settle('save');
+                this.saveShape();
+            }, SAVE_DELAY);
+        }
+    }
+
+    /**
+     * Marks a timer as work in progress, so a test runner waits for it (core/pending).
+     *
+     * @param {string} key
+     */
+    wait(key) {
+        this.settle(key);
+        this.waiting[key] = new Pending(`${COMPONENT}/${key}`);
+    }
+
+    /**
+     * Marks a timer's work as done.
+     *
+     * @param {string} key
+     */
+    settle(key) {
+        if (this.waiting[key]) {
+            this.waiting[key].resolve();
+            delete this.waiting[key];
         }
     }
 
@@ -299,6 +338,7 @@ class Hub {
             this.toggleFilter(target.dataset.filter, target.checked);
         } else if (action === 'shape' && target.dataset.kind !== 'codevalue') {
             clearTimeout(this.saveTimer);
+            this.settle('save');
             this.saveShape();
         } else if (action === 'allocdays') {
             const days = Math.max(0, Math.min(365, parseInt(target.value, 10) || 0));
@@ -1115,76 +1155,128 @@ class Hub {
         if (isrefresh && this.refreshing) {
             return;
         }
+        const pending = new Pending(`${COMPONENT}/load`);
         const seq = ++this.seq;
         this.refreshing = this.refreshing || isrefresh;
         const state = this.readState();
         const call = {viewid: state.viewid, yearid: state.yearid, type: this.type, personid: state.personid, ...args};
-        const loading = this.root.querySelector(SELECTORS.loading);
-        const container = this.root.querySelector(SELECTORS.view);
-        const focused = document.activeElement;
-        const action = focused && this.root.contains(focused) ? focused.dataset.action : null;
-        const panel = this.root.querySelector(SELECTORS.editor);
-        const panelScroll = panel ? (panel.querySelector('.hub-panel-body') || panel).scrollTop : 0;
-        this.say('');
-        loading.hidden = false;
-        container.setAttribute('aria-busy', 'true');
-        this.root.querySelectorAll('[data-action="refresh"]').forEach(button => {
-            button.disabled = true;
-        });
+        const kept = this.keep(focus);
+        this.busy(true);
         try {
             const [result] = Ajax.call([{methodname, args: call}]);
             const response = await result;
-            if (seq !== this.seq) {
-                return;
+            if (seq === this.seq) {
+                this.show(response.html, kept);
+                this.say(await getString(isrefresh ? 'statusrefreshed' : 'statusloaded', COMPONENT));
             }
-            container.innerHTML = response.html;
-            this.readState();
-            if (this.type !== this.state.type) {
-                this.type = this.state.type;
-            }
-            if (!this.collapsedTouched) {
-                this.collapsed = new Set(['done']);
-            }
-            this.apply();
-            this.renderChips().catch(Notification.exception);
-            localise(this.root).catch(Notification.exception);
-            if (this.panelOpen) {
-                this.openEditor(focus);
-                const body = this.root.querySelector(`${SELECTORS.editor} .hub-panel-body`);
-                if (body) {
-                    body.scrollTop = panelScroll;
-                }
-            } else if (focus) {
-                const target = this.root.querySelector(focus);
-                if (target) {
-                    target.focus();
-                }
-            } else if (action) {
-                const target = this.root.querySelector(`[data-action="${action}"]:not([hidden])`) || this.viewRoot;
-                if (target) {
-                    target.focus();
-                }
-            }
-            this.say(await getString(isrefresh ? 'statusrefreshed' : 'statusloaded', COMPONENT));
         } catch (error) {
-            const box = this.root.querySelector(SELECTORS.editorError);
-            if (this.panelOpen && box && error && error.message) {
-                box.textContent = error.message;
-                box.hidden = false;
-            } else {
-                Notification.exception(error);
-            }
+            this.fail(error);
         } finally {
             if (isrefresh) {
                 this.refreshing = false;
             }
             if (seq === this.seq) {
-                loading.hidden = true;
-                container.removeAttribute('aria-busy');
-                this.root.querySelectorAll('[data-action="refresh"]').forEach(button => {
-                    button.disabled = false;
-                });
+                this.busy(false);
             }
+            pending.resolve();
+        }
+    }
+
+    /**
+     * What to put back after a load: the control to focus and how far the editor was scrolled.
+     *
+     * @param {string|null} focus A selector to focus afterwards.
+     * @returns {Object} focus, action (the focused control's data-action), panelScroll
+     */
+    keep(focus) {
+        const focused = document.activeElement;
+        const panel = this.root.querySelector(SELECTORS.editor);
+        return {
+            focus,
+            action: focused && this.root.contains(focused) ? focused.dataset.action : null,
+            panelScroll: panel ? (panel.querySelector('.hub-panel-body') || panel).scrollTop : 0,
+        };
+    }
+
+    /**
+     * Shows or hides the loading state.
+     *
+     * @param {boolean} on
+     */
+    busy(on) {
+        const loading = this.root.querySelector(SELECTORS.loading);
+        const container = this.root.querySelector(SELECTORS.view);
+        if (on) {
+            this.say('');
+            container.setAttribute('aria-busy', 'true');
+        } else {
+            container.removeAttribute('aria-busy');
+        }
+        loading.hidden = !on;
+        this.root.querySelectorAll('[data-action="refresh"]').forEach(button => {
+            button.disabled = on;
+        });
+    }
+
+    /**
+     * Puts a freshly rendered view in place and restores what the user had open.
+     *
+     * @param {string} html
+     * @param {Object} kept From keep().
+     */
+    show(html, kept) {
+        const container = this.root.querySelector(SELECTORS.view);
+        container.innerHTML = html;
+        this.readState();
+        if (this.type !== this.state.type) {
+            this.type = this.state.type;
+        }
+        if (!this.collapsedTouched) {
+            this.collapsed = new Set(['done']);
+        }
+        this.apply();
+        this.renderChips().catch(Notification.exception);
+        localise(this.root).catch(Notification.exception);
+        this.restore(kept);
+    }
+
+    /**
+     * Focuses what was focused before a load, and scrolls the editor back to where it was.
+     *
+     * @param {Object} kept From keep().
+     */
+    restore(kept) {
+        if (this.panelOpen) {
+            this.openEditor(kept.focus);
+            const body = this.root.querySelector(`${SELECTORS.editor} .hub-panel-body`);
+            if (body) {
+                body.scrollTop = kept.panelScroll;
+            }
+            return;
+        }
+        let target = null;
+        if (kept.focus) {
+            target = this.root.querySelector(kept.focus);
+        } else if (kept.action) {
+            target = this.root.querySelector(`[data-action="${kept.action}"]:not([hidden])`) || this.viewRoot;
+        }
+        if (target) {
+            target.focus();
+        }
+    }
+
+    /**
+     * Shows a load's error: in the editor when it is open (a code that matches nothing), else as a notification.
+     *
+     * @param {Error} error
+     */
+    fail(error) {
+        const box = this.root.querySelector(SELECTORS.editorError);
+        if (this.panelOpen && box && error && error.message) {
+            box.textContent = error.message;
+            box.hidden = false;
+        } else {
+            Notification.exception(error);
         }
     }
 }
