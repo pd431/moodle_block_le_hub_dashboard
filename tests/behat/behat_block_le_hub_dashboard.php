@@ -417,6 +417,18 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
+     * There should <not>be a hub row "<name>".
+     *
+     * @Then /^there should (?P<not>not )?be a hub row "(?P<name>[^"]*)"$/
+     * @param string $not
+     * @param string $name
+     */
+    public function there_should_be_a_hub_row(string $not, string $name): void {
+        $step = $not ? 'should_not_exist' : 'should_exist';
+        $this->execute('behat_general::' . $step, [self::row_xpath($name), 'xpath_element']);
+    }
+
+    /**
      * I should <not>see "<text>" in the "Hub dashboard" block.
      *
      * @Then /^I should (?P<not>not )?see "(?P<text>[^"]*)" in the "Hub dashboard" block$/

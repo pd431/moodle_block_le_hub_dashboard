@@ -148,13 +148,18 @@ class Hub {
      * @param {HTMLElement|null} where
      */
     disarm(where) {
-        (where || this.root).querySelectorAll('[data-armed]').forEach(item => {
+        const armed = (where || this.root).querySelectorAll('[data-armed]');
+        armed.forEach(item => {
             const label = item.querySelector('[data-region="hub-ignore-label"], [data-region="hub-delete-label"]');
             if (label && item.dataset.label) {
                 label.textContent = item.dataset.label;
             }
             delete item.dataset.armed;
         });
+        if (armed.length) {
+            // The "click again" announcement is over.
+            this.say('');
+        }
     }
 
     /**
