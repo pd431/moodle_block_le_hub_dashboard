@@ -58,7 +58,6 @@ class save_view extends base {
      * @param string $name
      * @param string $rules
      * @param int $allocdays
-     * @param int $stateviewid
      * @param int $yearid
      * @param string $type
      * @param int $personid
@@ -70,7 +69,6 @@ class save_view extends base {
         string $name = '',
         string $rules = '',
         int $allocdays = -1,
-        int $stateviewid = -1,
         int $yearid = -1,
         string $type = '',
         int $personid = 0

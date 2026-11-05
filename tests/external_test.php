@@ -214,6 +214,34 @@ final class external_test extends \advanced_testcase {
     }
 
     /**
+     * Every service answers when called the way the page calls it: by name, with the page's state alongside its own
+     * arguments. The Ajax layer passes arguments in the declared order, so a method whose signature differs from
+     * its declared parameters gets the wrong values (saving a view once failed this way).
+     */
+    public function test_services_answer_the_pages_calls(): void {
+        $this->hub();
+        $cmid = (int)\block_le_dashboard\fixture\steps::instance()->cm('Problem sheet 4')->id;
+        $_POST['sesskey'] = sesskey();
+        $state = ['viewid' => -1, 'yearid' => 0, 'type' => 'summative', 'personid' => 0];
+        $calls = [
+            'block_le_hub_dashboard_get_view' => [],
+            'block_le_hub_dashboard_refresh' => [],
+            'block_le_hub_dashboard_save_view' => ['action' => 'create', 'viewid' => 0, 'name' => 'Arts team'],
+            'block_le_hub_dashboard_ignore' => ['kind' => 'outcm', 'value' => $cmid, 'undo' => false],
+            'block_le_hub_dashboard_add_note' => ['cmid' => $cmid, 'note' => 'Chased', 'escalated' => false],
+        ];
+        foreach ($calls as $name => $args) {
+            $reply = external_api::call_external_function($name, $args + $state, false);
+            $this->assertFalse($reply['error'], $name . ': ' . ($reply['exception']->message ?? ''));
+        }
+        // Find has no state: it looks things up, it does not draw the view.
+        foreach (['block_le_hub_dashboard_find' => ['text' => 'mo']] as $name => $args) {
+            $reply = external_api::call_external_function($name, $args, false);
+            $this->assertFalse($reply['error'], $name . ': ' . ($reply['exception']->message ?? ''));
+        }
+    }
+
+    /**
      * Without hub access every service refuses.
      */
     public function test_services_need_hub_access(): void {
