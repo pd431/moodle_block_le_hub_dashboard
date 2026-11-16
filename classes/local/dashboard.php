@@ -355,8 +355,12 @@ final class dashboard {
             $cat['checked'] = in_array($cat['id'], $view->cat);
         }
         unset($cat);
-        $picker = ['id' => \html_writer::random_id('hubcats'), 'label' => get_string('editor_departments', 'block_le_hub_dashboard'),
-            'categories' => $categories, 'hascategories' => !empty($categories)];
+        $picker = [
+            'id' => \html_writer::random_id('hubcats'),
+            'label' => get_string('editor_departments', 'block_le_hub_dashboard'),
+            'categories' => $categories,
+            'hascategories' => !empty($categories),
+        ];
         $codes = [];
         foreach (['starts', 'contains'] as $kind) {
             foreach ($view->$kind as $text) {
