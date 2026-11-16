@@ -2099,4 +2099,147 @@ class behat_block_le_hub_dashboard extends behat_base {
             throw new ExpectationException("The Find box holds '$value'", $this->getSession());
         }
     }
+
+    /**
+     * Every visible text, icon, bar segment and control outline in the hub meets My assessments' contrast
+     * targets: text APCA Lc 75 and WCAG 4.5:1; icons, bars, outlines and focus Lc 45 and 3:1 (CONTRAST.md).
+     *
+     * @Then /^the Hub dashboard block should meet its contrast targets$/
+     */
+    public function the_hub_should_meet_its_contrast_targets(): void {
+        $this->assert_contrast($this->contrast('all', self::BLOCK), 'At rest');
+    }
+
+    /**
+     * The same, with the pointer over each kind of control in turn: one of each button, link, select and item.
+     *
+     * @Then /^every kind of control in the Hub dashboard block should meet its contrast targets when hovered$/
+     */
+    public function every_hub_control_should_meet_its_contrast_targets_when_hovered(): void {
+        $failures = [];
+        $kinds = [];
+        $controls = ['.btn', 'a', 'button', 'select', '.dropdown-item', '.hub-chip'];
+        $selector = implode(', ', array_map(fn($control) => self::BLOCK . ' ' . $control, $controls));
+        foreach ($this->getSession()->getPage()->findAll('css', $selector) as $control) {
+            $classes = preg_replace('/\b(active|show|hub-row--open)\b/', '', (string) $control->getAttribute('class'));
+            $kind = $control->getTagName() . ' ' . trim($classes);
+            if (isset($kinds[$kind]) || !$control->isVisible()) {
+                continue;
+            }
+            $kinds[$kind] = true;
+            $id = 'hub-contrast-' . count($kinds);
+            $this->getSession()->executeScript('document.evaluate(' . json_encode($control->getXpath()) .
+                ', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue.setAttribute("data-contrast", "' .
+                $id . '")');
+            $control->mouseOver();
+            foreach ($this->contrast('all', '[data-contrast="' . $id . '"]') as $failure) {
+                $failures[] = "hovered $kind: $failure";
+            }
+        }
+        $this->getSession()->executeScript(
+            'document.querySelectorAll("[data-contrast]").forEach(e => e.removeAttribute("data-contrast"))'
+        );
+        $this->getSession()->getPage()->find('css', 'body')->mouseOver();
+        $this->assert_contrast($failures, 'Hovered');
+    }
+
+    /**
+     * Tabbing through the hub: every control's focus indicator reaches 3:1 and Lc 45 against what is behind it.
+     *
+     * @Then /^keyboard focus should be visible on every control in the Hub dashboard block$/
+     */
+    public function keyboard_focus_should_be_visible_on_every_hub_control(): void {
+        $inblock = 'return !!document.activeElement.closest(' . json_encode(self::BLOCK) . ')';
+        $this->getSession()->executeScript('document.activeElement.blur(); document.body.focus()');
+        for ($i = 0; $i < 100 && !$this->getSession()->evaluateScript($inblock); $i++) {
+            $this->press_tab();
+        }
+        $failures = [];
+        for ($stops = 0; $stops < 300 && $this->getSession()->evaluateScript($inblock); $stops++) {
+            $failures = array_merge($failures, $this->contrast('focus', self::BLOCK));
+            $this->press_tab();
+        }
+        if ($stops < 5) {
+            throw new ExpectationException("Tab reached only $stops controls in the hub", $this->getSession());
+        }
+        $this->assert_contrast($failures, 'Focused');
+    }
+
+    /**
+     * Presses Tab as a key action, so the browser moves focus and draws the focus-visible ring.
+     */
+    protected function press_tab(): void {
+        $tab = "\u{E004}";
+        $this->getSession()->getDriver()->getWebDriver()->executeCustomCommand('/session/:sessionId/actions', 'POST', [
+            'actions' => [['type' => 'key', 'id' => 'keyboard', 'actions' => [
+                ['type' => 'keyDown', 'value' => $tab],
+                ['type' => 'keyUp', 'value' => $tab],
+            ]]],
+        ]);
+        $this->wait_for_pending_js();
+    }
+
+    /**
+     * Runs My assessments' contrast checker (its tests/fixtures/contrast.js) in the page, then the hub's own check
+     * of each stacked-bar segment against its track, which that checker does not know.
+     *
+     * @param string $check "all", "focus" or one of the checks contrast.js lists
+     * @param string $selector What to check
+     * @return string[] One line per failure
+     */
+    protected function contrast(string $check, string $selector): array {
+        $js = file_get_contents(__DIR__ . '/../../../le_dashboard/tests/fixtures/contrast.js');
+        $js = trim(preg_replace('~^\s*//.*$~m', '', $js));
+        $failures = $this->getSession()->evaluateScript(
+            'return (' . $js . ')(' . json_encode($check) . ', ' . json_encode($selector) . ')'
+        );
+        if ($check !== 'all') {
+            return $failures;
+        }
+        $segments = <<<'JS'
+            return (selector => {
+                const out = [];
+                const cv = document.createElement('canvas').getContext('2d', {willReadFrequently: true});
+                const col = s => {
+                    cv.clearRect(0, 0, 1, 1);
+                    cv.fillStyle = s;
+                    cv.fillRect(0, 0, 1, 1);
+                    return cv.getImageData(0, 0, 1, 1).data;
+                };
+                const lin = v => (v /= 255) <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+                const lum = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+                const seen = new Set();
+                document.querySelectorAll(selector + ' .hub-stack-seg').forEach(seg => {
+                    const key = seg.className;
+                    if (seen.has(key) || seg.getBoundingClientRect().width < 2) {
+                        return;
+                    }
+                    seen.add(key);
+                    const fg = col(getComputedStyle(seg).backgroundColor);
+                    const bg = col(getComputedStyle(seg.parentElement).backgroundColor);
+                    const ratio = (Math.max(lum(fg), lum(bg)) + 0.05) / (Math.min(lum(fg), lum(bg)) + 0.05);
+                    if (ratio < 2.995) {
+                        out.push('bar ' + key + ': ' + ratio.toFixed(2) + ':1 against its track (needs 3:1)');
+                    }
+                });
+                return out;
+            })(arguments[0]);
+JS;
+        $segments = $this->getSession()->getDriver()->getWebDriver()->executeScript($segments, [$selector]);
+        return array_merge($failures, $segments ?: []);
+    }
+
+    /**
+     * Fails with every contrast failure, one per line.
+     *
+     * @param string[] $failures
+     * @param string $state
+     */
+    protected function assert_contrast(array $failures, string $state): void {
+        if ($failures) {
+            $failures = array_values(array_unique($failures));
+            throw new ExpectationException("$state, " . count($failures) . " parts of the hub miss their contrast targets:\n" .
+                implode("\n", $failures), $this->getSession());
+        }
+    }
 }

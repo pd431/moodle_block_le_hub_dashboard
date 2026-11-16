@@ -42,6 +42,33 @@ $hub-group-tones: (
     --hub-columns: 2rem minmax(8rem, 1fr) 6.5rem 20rem 9rem 4.5rem 2rem;
     --hub-areas: "icon name module status progress flags toggle";
 
+    // A hovered or open row: a quarter of the grey fill over the surface, the most tint that keeps muted text
+    // and links at APCA Lc 75 on it (CONTRAST.md). Browsers without color-mix() get no tint; the chevron still
+    // shows on hover.
+    --hub-row-tint: color-mix(in srgb, var(--ma-grey-fill) 25%, var(--ma-surface));
+
+    @supports not (color: color-mix(in srgb, red, blue)) {
+        --hub-row-tint: var(--ma-surface);
+    }
+
+    // Moodle 5.3's dark colour mode (D1): My assessments re-points every --ma-* token under
+    // [data-bs-theme="dark"], and the hub takes its colours from those tokens, so only the hub's own choices
+    // change here: bar segments move from the solid tones (made for a white track) to the bar step that My
+    // assessments checked on its dark track.
+    @at-root [data-bs-theme="dark"] & {
+        @each $segment, $tone in $hub-segments {
+            .hub-legend-item--#{$segment},
+            .hub-stack-seg--#{$segment} {
+                --hub-seg: var(--ma-#{$tone}-bar);
+            }
+        }
+
+        .hub-legend-item--sent,
+        .hub-stack-seg--sent {
+            --hub-seg: var(--ma-attention-bar);
+        }
+    }
+
     .hub-controls {
         display: flex;
         flex-wrap: wrap;
@@ -59,6 +86,41 @@ $hub-group-tones: (
         flex: 1 1 14rem;
         min-width: 12rem;
         max-width: 26rem;
+
+        // As My assessments' search box: the focus ring round the whole group, in the block's ring colour, which
+        // reaches Lc 45 in both colour modes where Bootstrap's own does not (D1).
+        .input-group {
+            border-radius: 0.3rem;
+
+            &:focus-within {
+                box-shadow: var(--ma-focus-ring);
+            }
+        }
+
+        .input-group-text,
+        .form-control {
+            border-color: var(--ma-control-line);
+            background-color: var(--ma-surface);
+            color: var(--ma-text);
+            box-shadow: none;
+        }
+    }
+
+    // Bootstrap's muted grey misses Lc 75 on Boost's dark card: the block's own muted colour instead, which My
+    // assessments checked in both modes. !important because Bootstrap's own rule carries it.
+    .text-muted {
+        color: var(--ma-text-muted) !important;
+    }
+
+    // The editor's inputs: the block's focus ring and lines, in both modes.
+    .hub-panel .form-control {
+        border-color: var(--ma-control-line);
+        background-color: var(--ma-surface);
+        color: var(--ma-text);
+
+        &:focus {
+            box-shadow: var(--ma-focus-ring);
+        }
     }
 
     .hub-spacer {
@@ -204,7 +266,7 @@ $hub-group-tones: (
         &[aria-pressed="true"] {
             background-color: var(--ma-primary-ink);
             border-color: var(--ma-primary-ink);
-            color: #fff;
+            color: var(--ma-surface);
         }
     }
 
@@ -479,7 +541,7 @@ $hub-group-tones: (
         &[aria-pressed="true"] {
             background-color: var(--ma-ink);
             border-color: var(--ma-ink);
-            color: #fff;
+            color: var(--ma-surface);
         }
     }
 
@@ -500,7 +562,7 @@ $hub-group-tones: (
     }
 
     .hub-row-line:hover {
-        background-color: var(--ma-grey-fill);
+        background-color: var(--hub-row-tint);
     }
 
     .hub-row-line:hover .hub-row-toggle,
@@ -510,7 +572,7 @@ $hub-group-tones: (
     }
 
     .hub-row--open .hub-row-line {
-        background-color: var(--ma-grey-fill);
+        background-color: var(--hub-row-tint);
     }
 
     .hub-row-name {
@@ -602,7 +664,7 @@ $hub-group-tones: (
         background-color: var(--hub-seg);
         // A hairline of the track's white at each segment's end, so neighbouring tones that are under 3:1 against
         // each other still read as separate segments (CONTRAST.md).
-        box-shadow: 1px 0 0 var(--ma-surface, #fff);
+        box-shadow: 1px 0 0 var(--ma-surface);
     }
 
     .hub-stack-text {
@@ -782,7 +844,7 @@ $hub-group-tones: (
         &:hover,
         &:focus {
             background-color: var(--bs-danger, var(--danger, #ca3120));
-            color: #fff;
+            color: var(--ma-surface);
         }
     }
 
@@ -799,16 +861,17 @@ $hub-group-tones: (
         padding: 0.6rem 1rem;
         border-radius: 0.3rem;
         box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.25);
+        // Inverted: the text colour as its surface, the surface colour as its text, in both colour modes.
         background-color: var(--ma-text);
-        color: #fff;
+        color: var(--ma-surface);
         transform: translateX(-50%);
     }
 
     .hub-toast-undo {
         --ma-rest: transparent;
-        --ma-line: #fff;
-        --ma-ink: #fff;
-        --ma-hover: rgba(255, 255, 255, 0.15);
+        --ma-line: var(--ma-surface);
+        --ma-ink: var(--ma-surface);
+        --ma-hover: color-mix(in srgb, var(--ma-surface) 15%, transparent);
     }
 
     // The view editor (P7, E1): a dialog over the whole window, in three columns on a wide screen (Departments,
@@ -1081,4 +1144,10 @@ $hub-group-tones: (
             display: none;
         }
     }
+}
+
+// Dark mode body text a step brighter than Boost's, as My assessments sets it for its own block (D1): the hub's
+// rows and dates take their colour from this variable too.
+[data-bs-theme="dark"] .block_le_hub_dashboard {
+    --bs-body-color: #ecf0f4;
 }
