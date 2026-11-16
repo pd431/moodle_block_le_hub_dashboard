@@ -33,6 +33,7 @@ import {setUserPreference} from 'core_user/repository';
 import Pending from 'core/pending';
 import {localise} from 'block_le_dashboard/localtime';
 import {Tips} from 'block_le_dashboard/tips';
+import {attach as attachPickers} from 'block_le_hub_dashboard/catpicker';
 
 const COMPONENT = 'block_le_hub_dashboard';
 
@@ -139,6 +140,12 @@ class Hub {
         root.addEventListener('keydown', e => this.keydown(e));
         root.addEventListener('submit', e => this.submit(e));
         root.addEventListener('focusout', e => this.focusout(e));
+        root.addEventListener('hub-catpicker-change', () => {
+            clearTimeout(this.saveTimer);
+            this.settle('save');
+            this.saveShape();
+        });
+        attachPickers(root);
         this.tips = new Tips(root);
         this.loadRows();
         this.apply();
@@ -1073,7 +1080,8 @@ class Hub {
     rules() {
         const panel = this.root.querySelector(SELECTORS.editor);
         const rules = {cat: [], starts: [], contains: [], course: []};
-        panel.querySelectorAll('[data-kind="cat"]:checked').forEach(check => rules.cat.push(check.value));
+        // Every ticked category; the server keeps the minimal cover (C3).
+        panel.querySelectorAll('[data-action="pick-category"]:checked').forEach(check => rules.cat.push(check.value));
         panel.querySelectorAll('[data-region="hub-code-line"]').forEach(line => {
             const kind = line.querySelector('[data-kind="codekind"]');
             const value = line.querySelector('[data-kind="codevalue"]');
@@ -1094,8 +1102,8 @@ class Hub {
         const focused = document.activeElement;
         let focus = null;
         if (focused && focused.closest(SELECTORS.editor)) {
-            if (focused.dataset.kind === 'cat') {
-                focus = `[data-kind="cat"][value="${focused.value}"]`;
+            if (focused.dataset.action === 'pick-category') {
+                focus = `[data-action="pick-category"][value="${focused.value}"]`;
             } else if (focused.dataset.kind === 'codevalue' || focused.dataset.kind === 'codekind') {
                 const lines = Array.from(this.root.querySelectorAll('[data-region="hub-code-line"]'));
                 const i = lines.indexOf(focused.closest('[data-region="hub-code-line"]'));
@@ -1426,6 +1434,7 @@ class Hub {
         const slot = this.root.querySelector(SELECTORS.editorSlot);
         if (slot && editor) {
             slot.innerHTML = editor;
+            attachPickers(slot);
         }
     }
 

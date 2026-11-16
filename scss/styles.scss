@@ -844,6 +844,18 @@ $hub-reason-tones: (
         }
     }
 
+    .hub-tree-item--dim {
+        opacity: 0.6;
+    }
+
+    .hub-catpicker-search {
+        margin-bottom: 0.35rem;
+    }
+
+    .hub-catpicker-empty {
+        margin: 0.25rem 0;
+    }
+
     @for $depth from 2 through 6 {
         .hub-tree-item--depth#{$depth} {
             padding-left: #{($depth - 1) * 1.25rem};

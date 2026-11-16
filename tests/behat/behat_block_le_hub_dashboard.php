@@ -1735,4 +1735,112 @@ class behat_block_le_hub_dashboard extends behat_base {
             'css_element',
         ]);
     }
+
+    // The category pickers (C2, C3).
+
+    /**
+     * A tree item by its name, in the editor's picker or the setting's.
+     *
+     * @param string $name
+     * @return \Behat\Mink\Element\NodeElement
+     */
+    protected function tree_item(string $name): \Behat\Mink\Element\NodeElement {
+        return $this->find('xpath', "//*[@data-region='hub-catpicker']//label[@data-region='hub-tree-item']" .
+            "[.//*[contains(@class, 'hub-tree-name')][normalize-space(.) = " . behat_context_helper::escape($name) . ']]');
+    }
+
+    /**
+     * I tick/untick "<name>" in the department tree.
+     *
+     * @When /^I (?P<how>tick|untick) "(?P<name>[^"]*)" in the department tree$/
+     * @param string $how
+     * @param string $name
+     */
+    public function i_tick_in_the_tree(string $how, string $name): void {
+        $box = $this->tree_item($name)->find('css', 'input');
+        if ($box->isChecked() !== ($how === 'tick')) {
+            $box->click();
+        }
+        $this->wait_for_pending_js();
+    }
+
+    /**
+     * "<name>" should be (fully|partly) ticked, or not ticked, in the department tree.
+     *
+     * @Then /^"(?P<name>[^"]*)" should (?P<state>be ticked|be fully ticked|be partly ticked|not be ticked) in the department tree$/
+     * @param string $name
+     * @param string $state
+     */
+    public function should_be_ticked_in_the_tree(string $name, string $state): void {
+        $box = $this->tree_item($name)->find('css', 'input');
+        $checked = $box->isChecked();
+        $partial = (bool)$this->getSession()->evaluateScript(
+            "return document.querySelector('[data-region=\"hub-catpicker\"] input[value=\"" . $box->getAttribute('value') .
+            "\"]').indeterminate;"
+        );
+        $actual = $partial ? 'be partly ticked' : ($checked ? 'be fully ticked' : 'not be ticked');
+        $expected = $state === 'be ticked' ? 'be fully ticked' : $state;
+        if ($actual !== $expected) {
+            throw new ExpectationException("'$name' is '$actual', not '$expected'", $this->getSession());
+        }
+    }
+
+    /**
+     * The view's departments should be saved as "<names>": what the open view's category rules are, by name.
+     *
+     * @Then /^the view's departments should be saved as "(?P<names>[^"]*)"$/
+     * @param string $names
+     */
+    public function departments_saved_as(string $names): void {
+        global $DB;
+        $this->wait_for_pending_js();
+        $username = $this->getSession()->evaluateScript("return document.body.getAttribute('data-username') || '';");
+        $userid = $username ? \block_le_dashboard\fixture\steps::userid($username)
+            : (int)$DB->get_field('user', 'id', ['username' => 'hub1']);
+        $view = \block_le_hub_dashboard\local\views::current($userid);
+        $actual = [];
+        foreach ($view->cat as $id) {
+            $actual[] = $DB->get_field('course_categories', 'name', ['id' => $id]);
+        }
+        sort($actual);
+        $expected = array_map('trim', explode(',', $names));
+        sort($expected);
+        if ($actual !== $expected) {
+            throw new ExpectationException("The view's departments are '" . implode(', ', $actual) . "'", $this->getSession());
+        }
+    }
+
+    /**
+     * I type "<text>" in the department search box (the editor's) or the hub categories search box (the setting's).
+     *
+     * @When /^I type "(?P<text>[^"]*)" in the (?:department|hub categories) search box$/
+     * @param string $text
+     */
+    public function i_type_in_the_tree_search(string $text): void {
+        $box = $this->find('css', '[data-region="hub-catpicker"] [data-action="catpicker-search"]');
+        $box->setValue($text);
+        $box->keyPress(13);
+        $this->wait_for_pending_js();
+    }
+
+    /**
+     * The department tree (or categories picker) should <not>list "<names>".
+     *
+     * @Then /^the (?:department tree|categories picker) should (?P<not>not )?list "(?P<names>[^"]*)"$/
+     * @param string $not
+     * @param string $names
+     */
+    public function tree_should_list(string $not, string $names): void {
+        $visible = [];
+        foreach ($this->find_all('css', '[data-region="hub-catpicker"] [data-region="hub-tree-item"]') as $item) {
+            if ($item->isVisible()) {
+                $visible[] = trim($item->find('css', '.hub-tree-name')->getText());
+            }
+        }
+        foreach (array_map('trim', explode(',', $names)) as $name) {
+            if (in_array($name, $visible, true) === (bool)$not) {
+                throw new ExpectationException("The tree lists '" . implode(', ', $visible) . "'", $this->getSession());
+            }
+        }
+    }
 }

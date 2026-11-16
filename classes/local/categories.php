@@ -136,6 +136,35 @@ final class categories {
     }
 
     /**
+     * The minimal cover of some categories (C3): a category whose ancestor is also picked is dropped, since the
+     * ancestor already covers it. What a view or the setting saves.
+     *
+     * @param int[] $ids
+     * @return int[]
+     */
+    public static function cover(array $ids): array {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        $all = self::all();
+        $picked = array_fill_keys($ids, true);
+        $out = [];
+        foreach ($ids as $id) {
+            $covered = false;
+            $parent = isset($all[$id]) ? (int)$all[$id]->parent : 0;
+            while ($parent && isset($all[$parent])) {
+                if (isset($picked[$parent])) {
+                    $covered = true;
+                    break;
+                }
+                $parent = (int)$all[$parent]->parent;
+            }
+            if (!$covered) {
+                $out[] = $id;
+            }
+        }
+        return $out;
+    }
+
+    /**
      * The tree for a picker: the categories in the site's order with their depth and parent. Limited to the hub's
      * categories (C1) unless asked for the whole site, as the administrator's own picker is.
      *
@@ -144,13 +173,27 @@ final class categories {
      */
     public static function tree(bool $limited = true): array {
         $valid = $limited ? self::valid() : null;
-        $out = [];
+        $shown = [];
         foreach (self::all() as $cat) {
-            if ($valid !== null && !in_array((int)$cat->id, $valid, true)) {
-                continue;
+            if ($valid === null || in_array((int)$cat->id, $valid, true)) {
+                $shown[(int)$cat->id] = $cat;
+            }
+        }
+        $out = [];
+        foreach ($shown as $cat) {
+            // Depth and parent within what is shown, so a limited tree starts at the left.
+            $depth = 1;
+            $parent = (int)$cat->parent;
+            $shownparent = 0;
+            while ($parent && isset(self::all()[$parent])) {
+                if (isset($shown[$parent])) {
+                    $depth++;
+                    $shownparent = $shownparent ?: $parent;
+                }
+                $parent = (int)self::all()[$parent]->parent;
             }
             $out[] = ['id' => (int)$cat->id, 'name' => format_string($cat->name, true, ['escape' => false]),
-                'depth' => (int)$cat->depth, 'parent' => (int)$cat->parent];
+                'depth' => $depth, 'parent' => $shownparent];
         }
         return $out;
     }

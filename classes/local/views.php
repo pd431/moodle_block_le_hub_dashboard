@@ -187,6 +187,9 @@ final class views {
             $values = array_map('trim', array_map('strval', $rules[$kind] ?? []));
             if ($kind === 'course') {
                 $values = self::course_ids($values);
+            } else if ($kind === 'cat') {
+                // The minimal cover (C3): a ticked category stands for everything under it.
+                $values = array_map('strval', categories::cover(array_filter($values, 'is_numeric')));
             }
             foreach (array_unique(array_filter($values, 'strlen')) as $value) {
                 $DB->insert_record(self::RULES, (object)['viewid' => $id, 'kind' => $kind,

@@ -20,7 +20,8 @@ use block_le_hub_dashboard\local\categories;
 
 /**
  * The "categories the hub works in" setting (C1): the site's category tree as checkboxes, saved as a comma list of
- * ids. Rendered by the catpicker template the view editor shares.
+ * ids, the minimal cover of what was ticked (C3). Rendered by the catpicker template and script the view editor
+ * shares (C2).
  *
  * @package    block_le_hub_dashboard
  * @copyright  2026 Pierre Camaly de Brosses - University of Exeter
@@ -61,7 +62,7 @@ class setting_categories extends \admin_setting {
                 $ids[] = (int)$value;
             }
         }
-        $ok = $this->config_write($this->name, implode(',', array_unique($ids)));
+        $ok = $this->config_write($this->name, implode(',', categories::cover($ids)));
         categories::reset();
         return $ok ? '' : get_string('errorsetting', 'admin');
     }
@@ -75,7 +76,7 @@ class setting_categories extends \admin_setting {
      */
     #[\Override]
     public function output_html($data, $query = '') {
-        global $OUTPUT;
+        global $OUTPUT, $PAGE;
         $picked = array_map('intval', array_filter(explode(',', (string)$data), 'is_numeric'));
         $tree = categories::tree(false);
         foreach ($tree as &$cat) {
@@ -85,10 +86,16 @@ class setting_categories extends \admin_setting {
         $context = [
             'id' => $this->get_id(),
             'field' => $this->get_full_name(),
+            'labelledby' => $this->get_id() . 'label',
             'categories' => $tree,
             'hascategories' => !empty($tree),
         ];
-        $html = $OUTPUT->render_from_template('block_le_hub_dashboard/catpicker', $context);
+        $PAGE->requires->js_call_amd('block_le_hub_dashboard/catpicker', 'init', [$this->get_id()]);
+        // The hub's styles are scoped to its block wrapper; the setting page borrows it.
+        $html = \html_writer::div(
+            $OUTPUT->render_from_template('block_le_hub_dashboard/catpicker', $context),
+            'block_le_dashboard_dashboard le-hub hub-catpicker-setting'
+        );
         return format_admin_setting($this, $this->visiblename, $html, $this->description, true, '', '', $query);
     }
 

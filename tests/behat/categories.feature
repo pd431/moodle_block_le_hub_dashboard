@@ -47,3 +47,49 @@ Feature: The administrator sets the categories the hub works in
     And I search the hub dashboard for the person "Mo Marker"
     Then there should be a hub row "Problem sheet 4"
     And there should not be a hub row "Essay"
+
+  Scenario: Ticking a department ticks its children, and unticking one child leaves the parent partly ticked
+    When I log in as "hub1" and view the "Hub dashboard"
+    And I click on "This view" "button" in the "Hub dashboard" "block"
+    And I click on "Edit what this view shows" "link" in the "Hub dashboard" "block"
+    Then "Faculty of Science" should be fully ticked in the department tree
+    And "Biosciences" should be ticked in the department tree
+    When I untick "Faculty of Science" in the department tree
+    Then "Biosciences" should not be ticked in the department tree
+    When I tick "Faculty of Science" in the department tree
+    Then "Biosciences" should be ticked in the department tree
+    And "Physics" should be ticked in the department tree
+    And "Faculty of Science" should be fully ticked in the department tree
+    When I untick "Physics" in the department tree
+    Then "Faculty of Science" should be partly ticked in the department tree
+    And the view's departments should be saved as "Biosciences"
+    When I tick "Physics" in the department tree
+    Then "Faculty of Science" should be fully ticked in the department tree
+    And the view's departments should be saved as "Faculty of Science"
+
+  Scenario: Typing in the department search narrows the tree and keeps the path readable
+    When I log in as "hub1" and view the "Hub dashboard"
+    And I click on "This view" "button" in the "Hub dashboard" "block"
+    And I click on "Edit what this view shows" "link" in the "Hub dashboard" "block"
+    And I type "hist" in the department search box
+    Then the department tree should list "Faculty of Arts, History"
+    And the department tree should not list "Physics"
+    When I type "fac sci" in the department search box
+    Then the department tree should list "Faculty of Science"
+    And the department tree should not list "Faculty of Arts"
+    When I type "" in the department search box
+    Then the department tree should list "Faculty of Arts, Physics"
+
+  Scenario: The administrator's picker has a search box and the same ticking
+    Given I log in as "admin"
+    And I navigate to "Plugins > Blocks > Hub dashboard" in site administration
+    When I type "bio" in the hub categories search box
+    Then the categories picker should list "Faculty of Science, Biosciences"
+    And the categories picker should not list "Physics"
+    When I type "" in the hub categories search box
+    And I tick "Faculty of Science" in the department tree
+    Then "Physics" should be ticked in the department tree
+    When I press "Save changes"
+    And I navigate to "Plugins > Blocks > Hub dashboard" in site administration
+    Then "Faculty of Science" should be fully ticked in the department tree
+    And "Biosciences" should be ticked in the department tree

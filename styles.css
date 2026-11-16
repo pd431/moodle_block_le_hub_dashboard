@@ -745,6 +745,15 @@
 .block_le_dashboard_dashboard.le-hub .hub-tree-item input {
     margin-right: 0.35rem;
 }
+.block_le_dashboard_dashboard.le-hub .hub-tree-item--dim {
+    opacity: 0.6;
+}
+.block_le_dashboard_dashboard.le-hub .hub-catpicker-search {
+    margin-bottom: 0.35rem;
+}
+.block_le_dashboard_dashboard.le-hub .hub-catpicker-empty {
+    margin: 0.25rem 0;
+}
 .block_le_dashboard_dashboard.le-hub .hub-tree-item--depth2 {
     padding-left: 1.25rem;
 }

@@ -353,6 +353,8 @@ final class dashboard {
             $cat['checked'] = in_array($cat['id'], $view->cat);
         }
         unset($cat);
+        $picker = ['id' => \html_writer::random_id('hubcats'), 'labelledby' => '', 'categories' => $categories,
+            'hascategories' => !empty($categories)];
         $codes = [];
         foreach (['starts', 'contains'] as $kind) {
             foreach ($view->$kind as $text) {
@@ -386,7 +388,8 @@ final class dashboard {
             }
         }
         [$in, $total] = views::module_counts($view);
-        return ['categories' => $categories, 'codes' => $codes, 'hascodes' => !empty($codes), 'added' => $added,
+        return ['categories' => $categories, 'picker' => $picker, 'codes' => $codes, 'hascodes' => !empty($codes),
+            'added' => $added,
             'hasadded' => !empty($added),
             'outcourses' => $out, 'hasoutcourses' => !empty($out), 'outcms' => $outcms, 'hasoutcms' => !empty($outcms),
             'hasexceptions' => !empty($out) || !empty($outcms), 'allocdays' => (int)$view->allocdays,

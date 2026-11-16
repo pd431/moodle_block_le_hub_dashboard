@@ -32,6 +32,7 @@ $string['both'] = 'Both';
 $string['budget_over'] = 'Still loading: this view covers {$a} assessments. Narrow it, or try again.';
 $string['categories'] = 'Categories the hub works in';
 $string['categories_desc'] = 'Tick the faculties and departments whose modules the hub supports. Ticking a category covers everything under it. With nothing ticked the hub works in every category. Views, code rules, modules added by code and person searches stay inside these categories.';
+$string['catpicker_nocategories'] = 'There are no categories to pick from.';
 $string['catpicker_none'] = 'No category matches';
 $string['catpicker_search'] = 'Search categories';
 $string['chip_remove'] = 'Remove {$a}';

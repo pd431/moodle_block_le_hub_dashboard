@@ -193,6 +193,29 @@ final class views_test extends \advanced_testcase {
     }
 
     /**
+     * A view saves the minimal cover of what was ticked (C3): a ticked faculty with all its departments saves the
+     * faculty alone, a partly ticked faculty saves its ticked departments, and the match is the same either way.
+     */
+    public function test_departments_save_as_the_minimal_cover(): void {
+        $this->resetAfterTest();
+        $this->fixtures();
+        $u = (int)$this->getDataGenerator()->create_user()->id;
+        $science = (int)$this->cats['Science']->id;
+        $biology = (int)$this->cats['Biology']->id;
+        $this->assertSame([$science], categories::cover([$biology, $science]));
+        $this->assertSame([$biology], categories::cover([$biology]));
+        $history = (int)$this->cats['History']->id;
+        $this->assertSame([$science, $history], categories::cover([$science, $biology, $history]));
+
+        $view = $this->view($u, ['cat' => [$science, $biology]]);
+        $this->assertSame([$science], $view->cat);
+        $this->assertSame(['BIO1', 'PHY1'], $this->sql_picks($view));
+        $partial = $this->view($u, ['cat' => [$biology]]);
+        $this->assertSame([$biology], $partial->cat);
+        $this->assertSame(['BIO1'], $this->sql_picks($partial));
+    }
+
+    /**
      * The SQL and PHP forms agree, and each kind of line does what it says.
      */
     public function test_in_view_sql_and_cm_in_view_agree(): void {
