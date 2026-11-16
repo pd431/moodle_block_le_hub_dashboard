@@ -57,6 +57,7 @@ class add_note extends base {
      * @param int $yearid
      * @param string $type
      * @param int $personid
+     * @param bool $witheditor
      * @return array
      */
     public static function execute(
@@ -66,17 +67,18 @@ class add_note extends base {
         int $viewid = -1,
         int $yearid = -1,
         string $type = '',
-        int $personid = 0
+        int $personid = 0,
+        bool $witheditor = false
     ): array {
         global $DB;
         $p = self::validate_parameters(self::execute_parameters(), ['cmid' => $cmid, 'note' => $note, 'escalated' => $escalated,
-            'viewid' => $viewid, 'yearid' => $yearid, 'type' => $type, 'personid' => $personid]);
+            'viewid' => $viewid, 'yearid' => $yearid, 'type' => $type, 'personid' => $personid, 'witheditor' => $witheditor]);
         $userid = self::user();
         if (!$DB->record_exists('block_le_dashboard_cm', ['cmid' => $p['cmid']])) {
             throw new \invalid_parameter_exception('Not an indexed assessment');
         }
         notes::add((int)$p['cmid'], $userid, $p['note'], (bool)$p['escalated']);
-        return self::render(self::dashboard($userid, $p));
+        return self::render(self::dashboard($userid, $p), (bool)$p['witheditor']);
     }
 
     /**

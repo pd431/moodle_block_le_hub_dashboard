@@ -18,6 +18,7 @@ namespace block_le_hub_dashboard;
 
 use block_le_hub_dashboard\external\add_note;
 use block_le_hub_dashboard\external\find;
+use block_le_hub_dashboard\external\get_rows;
 use block_le_hub_dashboard\external\get_view;
 use block_le_hub_dashboard\external\ignore;
 use block_le_hub_dashboard\external\refresh;
@@ -35,6 +36,7 @@ use core_external\external_api;
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \block_le_hub_dashboard\external\base
  * @covers     \block_le_hub_dashboard\external\get_view
+ * @covers     \block_le_hub_dashboard\external\get_rows
  * @covers     \block_le_hub_dashboard\external\refresh
  * @covers     \block_le_hub_dashboard\external\save_view
  * @covers     \block_le_hub_dashboard\external\ignore
@@ -213,6 +215,50 @@ final class external_test extends \advanced_testcase {
         $this->assertSame([], $found['staff']);
     }
 
+
+    /**
+     * The frame comes without its rows or editor; get_rows renders the rows asked for, and the editor comes only when
+     * asked for (L1, L2, L4).
+     */
+    public function test_get_rows_and_lazy_editor(): void {
+        $this->hub();
+        $cmid = (int)\block_le_dashboard\fixture\steps::instance()->cm('Problem sheet 4')->id;
+
+        $reply = external_api::clean_returnvalue(get_view::execute_returns(), get_view::execute());
+        $this->assertSame('', $reply['editor'] ?? '');
+        $this->assertStringNotContainsString('hub-tree', $reply['html']);
+
+        $reply = external_api::clean_returnvalue(get_view::execute_returns(), get_view::execute(-1, -1, '', 0, true));
+        $this->assertStringContainsString('hub-tree', $reply['editor']);
+        $this->assertStringContainsString('Faculty of Science', $reply['editor']);
+
+        $rows = external_api::clean_returnvalue(get_rows::execute_returns(), get_rows::execute([$cmid]));
+        $this->assertSame(1, $rows['count']);
+        $this->assertStringContainsString('Problem sheet 4', $rows['html']);
+        $this->assertMatchesRegularExpression('~data-group="(ready|chase|progress|done)"~', $rows['html']);
+
+        // A cmid outside the view is not rendered.
+        $rows = external_api::clean_returnvalue(get_rows::execute_returns(), get_rows::execute([$cmid + 100000]));
+        $this->assertSame(0, $rows['count']);
+    }
+
+    /**
+     * A view's frame lists the cmids to fetch once it has more rows than one batch; a small view keeps them inline.
+     */
+    public function test_frame_defers_large_views(): void {
+        $this->hub();
+        $userid = (int)$this->user()->id;
+        $context = (new \block_le_hub_dashboard\local\dashboard($userid))->export(true);
+        $this->assertTrue($context['loading']);
+        $this->assertNotEmpty($context['cmids']);
+        $this->assertSame(20, $context['budget']);
+        foreach ($context['groups'] as $group) {
+            $this->assertSame([], $group['rows']);
+        }
+        $context = (new \block_le_hub_dashboard\local\dashboard($userid))->export(false);
+        $this->assertFalse($context['loading']);
+    }
+
     /**
      * Every service answers when called the way the page calls it: by name, with the page's state alongside its own
      * arguments. The Ajax layer passes arguments in the declared order, so a method whose signature differs from
@@ -226,6 +272,7 @@ final class external_test extends \advanced_testcase {
         $calls = [
             'block_le_hub_dashboard_get_view' => [],
             'block_le_hub_dashboard_refresh' => [],
+            'block_le_hub_dashboard_get_rows' => ['cmids' => [$cmid]],
             'block_le_hub_dashboard_save_view' => ['action' => 'create', 'viewid' => 0, 'name' => 'Arts team'],
             'block_le_hub_dashboard_ignore' => ['kind' => 'outcm', 'value' => $cmid, 'undo' => false],
             'block_le_hub_dashboard_add_note' => ['cmid' => $cmid, 'note' => 'Chased', 'escalated' => false],

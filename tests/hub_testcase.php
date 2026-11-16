@@ -684,7 +684,7 @@ abstract class hub_testcase extends view_testcase {
         $header = $this->find(".//*[@data-region='hub-group-header']", $this->group($group));
         $parts = [self::text($this->find(".//*[contains(@class, 'hub-group-title')]", $header)) . ' ' .
             self::text($this->find(".//*[@data-region='hub-group-count']", $header))];
-        foreach ($this->find_all(".//button[@data-action='reason']", $header) as $button) {
+        foreach ($this->find_all(".//button[@data-action='reason'][not(@hidden)]", $header) as $button) {
             $parts[] = self::text($button);
         }
         $actual = implode(' · ', $parts);

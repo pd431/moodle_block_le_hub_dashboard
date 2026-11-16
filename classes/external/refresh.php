@@ -49,11 +49,18 @@ class refresh extends base {
      * @param int $yearid
      * @param string $type
      * @param int $personid
+     * @param bool $witheditor
      * @return array
      */
-    public static function execute(int $viewid = -1, int $yearid = -1, string $type = '', int $personid = 0): array {
+    public static function execute(
+        int $viewid = -1,
+        int $yearid = -1,
+        string $type = '',
+        int $personid = 0,
+        bool $witheditor = false
+    ): array {
         $state = self::validate_parameters(self::execute_parameters(), ['viewid' => $viewid, 'yearid' => $yearid, 'type' => $type,
-            'personid' => $personid]);
+            'personid' => $personid, 'witheditor' => $witheditor]);
         $userid = self::user();
         $dashboard = self::dashboard($userid, $state);
         $cmids = $dashboard->cmids();
@@ -81,7 +88,7 @@ class refresh extends base {
             $last[$key] = time();
             config::set_preference('lastrefresh', json_encode($last), $userid);
         }
-        return ['status' => $status] + self::render(self::dashboard($userid, $state));
+        return ['status' => $status] + self::render(self::dashboard($userid, $state), (bool)$state['witheditor']);
     }
 
     /**

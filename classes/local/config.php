@@ -31,6 +31,9 @@ final class config {
     /** A new view flags unallocated work from this many days before the submission deadline (P10). */
     const DEFAULT_ALLOC_DAYS = 30;
 
+    /** How long the page waits for one batch of rows before it offers Retry (L3). */
+    const DEFAULT_LOAD_SECONDS = 20;
+
     /** The user preferences the block keeps. */
     const PREFERENCES = ['view', 'type', 'year', 'lastrefresh', 'refreshing'];
 
@@ -50,6 +53,15 @@ final class config {
      */
     public static function alloc_days(): int {
         return self::number('allocdays', self::DEFAULT_ALLOC_DAYS);
+    }
+
+    /**
+     * How long the page waits for one batch of rows before it offers Retry (L3), in seconds.
+     *
+     * @return int
+     */
+    public static function load_seconds(): int {
+        return max(1, self::number('loadseconds', self::DEFAULT_LOAD_SECONDS));
     }
 
     /**

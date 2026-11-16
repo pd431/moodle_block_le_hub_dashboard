@@ -43,13 +43,20 @@ class get_view extends base {
      * @param int $yearid
      * @param string $type
      * @param int $personid
+     * @param bool $witheditor
      * @return array
      */
-    public static function execute(int $viewid = -1, int $yearid = -1, string $type = '', int $personid = 0): array {
+    public static function execute(
+        int $viewid = -1,
+        int $yearid = -1,
+        string $type = '',
+        int $personid = 0,
+        bool $witheditor = false
+    ): array {
         $state = self::validate_parameters(self::execute_parameters(), ['viewid' => $viewid, 'yearid' => $yearid, 'type' => $type,
-            'personid' => $personid]);
+            'personid' => $personid, 'witheditor' => $witheditor]);
         $userid = self::user();
-        return self::render(self::dashboard($userid, $state));
+        return self::render(self::dashboard($userid, $state), (bool)$state['witheditor']);
     }
 
     /**

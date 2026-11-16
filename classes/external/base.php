@@ -53,6 +53,7 @@ abstract class base extends external_api {
                 ''
             ),
             'personid' => new external_value(PARAM_INT, 'A person whose assessments to show, 0 for none', VALUE_DEFAULT, 0),
+            'witheditor' => new external_value(PARAM_BOOL, 'Whether to render the view editor too', VALUE_DEFAULT, false),
         ];
     }
 
@@ -91,11 +92,36 @@ abstract class base extends external_api {
      * @param dashboard $dashboard
      * @return array
      */
-    protected static function render(dashboard $dashboard): array {
+    protected static function render(dashboard $dashboard, bool $witheditor = false): array {
         global $PAGE;
         $output = $PAGE->get_renderer('core');
-        $context = $dashboard->export();
-        return ['html' => $output->render_from_template('block_le_hub_dashboard/view', $context), 'state' => $context['state']];
+        $context = $dashboard->export(false, $witheditor);
+        return [
+            'html' => $output->render_from_template('block_le_hub_dashboard/view', $context),
+            'state' => $context['state'],
+            'editor' => $context['editor'] ? $output->render_from_template('block_le_hub_dashboard/editor', $context) : '',
+        ];
+    }
+
+    /**
+     * Some of a state's rows, rendered (L2).
+     *
+     * @param dashboard $dashboard
+     * @param int[] $cmids
+     * @return array html, count
+     */
+    protected static function render_rows(dashboard $dashboard, array $cmids): array {
+        global $PAGE;
+        $output = $PAGE->get_renderer('core');
+        $html = '';
+        $count = 0;
+        foreach ($dashboard->groups($cmids) as $group => $rows) {
+            foreach ($rows as $row) {
+                $html .= $output->render_from_template('block_le_hub_dashboard/rowitem', $row + ['group' => $group]);
+                $count++;
+            }
+        }
+        return ['html' => $html, 'count' => $count];
     }
 
     /**
@@ -107,6 +133,7 @@ abstract class base extends external_api {
         return new external_single_structure([
             'html' => new external_value(PARAM_RAW, 'Rendered dashboard'),
             'state' => new external_value(PARAM_RAW, 'The state shown, as JSON'),
+            'editor' => new external_value(PARAM_RAW, 'The rendered view editor, when asked for', VALUE_OPTIONAL),
         ]);
     }
 }

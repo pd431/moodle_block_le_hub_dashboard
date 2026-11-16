@@ -38,8 +38,12 @@ class dashboard implements \renderable, \templatable {
         $this->userid = $userid;
     }
 
+    /**
+     * The block's own context: a small view comes with its rows, a large one lists what to fetch; the editor is
+     * fetched when it opens (L1, L4).
+     */
     #[\Override]
     public function export_for_template(renderer_base $output): array {
-        return (new \block_le_hub_dashboard\local\dashboard($this->userid))->export();
+        return (new \block_le_hub_dashboard\local\dashboard($this->userid))->export(false, false);
     }
 }

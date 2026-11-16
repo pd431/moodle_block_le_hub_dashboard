@@ -57,6 +57,7 @@ class block_le_hub_dashboard extends block_base {
             return $this->content;
         }
         $output = $this->page->get_renderer('core');
+        // The frame only: the page never waits for the rows, which the script fetches in batches (L1).
         $dashboard = new \block_le_hub_dashboard\output\dashboard((int)$USER->id);
         $context = $dashboard->export_for_template($output);
         $this->content->text = $output->render_from_template('block_le_hub_dashboard/dashboard', $context);

@@ -1607,4 +1607,54 @@ class behat_block_le_hub_dashboard extends behat_base {
         $row->find('css', '[data-action="save-note"]')->click();
         $this->wait_for_pending_js();
     }
+
+    // Loading (L1 to L4).
+
+    /**
+     * The hub's rows take "<n>" seconds to load: the first batch is held that long, then the rest arrive as usual.
+     *
+     * @Given /^the hub's rows take "(?P<seconds>\d+)" seconds to load$/
+     * @param int $seconds
+     */
+    public function rows_take_seconds(int $seconds): void {
+        set_config('testslowrows', $seconds, 'block_le_hub_dashboard');
+        set_config('testslowonce', 1, 'block_le_hub_dashboard');
+    }
+
+    /**
+     * The hub's load budget is "<n>" seconds.
+     *
+     * @Given /^the hub's load budget is "(?P<seconds>\d+)" seconds$/
+     * @param int $seconds
+     */
+    public function load_budget_is(int $seconds): void {
+        set_config('loadseconds', $seconds, 'block_le_hub_dashboard');
+    }
+
+    /**
+     * The hub has finished loading: the progress line has gone and no batch is waiting on Retry.
+     *
+     * @When /^the hub has finished loading$/
+     */
+    public function hub_has_finished_loading(): void {
+        $this->spin(function ($context) {
+            $page = $context->getSession()->getPage();
+            $progress = $page->find('css', self::BLOCK . ' [data-region="hub-progress"]');
+            $budget = $page->find('css', self::BLOCK . ' [data-region="hub-budget"]');
+            if (($progress && $progress->isVisible()) || ($budget && $budget->isVisible())) {
+                throw new ExpectationException('The hub is still loading', $context->getSession());
+            }
+            return true;
+        }, [], 30);
+        $this->wait_for_pending_js();
+    }
+
+    /**
+     * The page should not contain the department tree: the editor is fetched when it opens (L4).
+     *
+     * @Then /^the page should not contain the department tree$/
+     */
+    public function page_should_not_contain_the_tree(): void {
+        $this->execute('behat_general::should_not_exist', [self::BLOCK . ' .hub-tree', 'css_element']);
+    }
 }

@@ -40,6 +40,11 @@ const SELECTORS = {
     view: '[data-region="hub-view"]',
     viewRoot: '[data-region="hub-view-root"]',
     loading: '[data-region="hub-loading"]',
+    progress: '[data-region="hub-progress"]',
+    progressText: '[data-region="hub-progress-text"]',
+    budget: '[data-region="hub-budget"]',
+    budgetText: '[data-region="hub-budget-text"]',
+    editorSlot: '[data-region="hub-editor-slot"]',
     status: '[data-region="hub-status"]',
     list: '[data-region="hub-list"]',
     group: '[data-region="hub-group"]',
@@ -68,6 +73,8 @@ const FIND_DELAY = 250;
 const SAVE_DELAY = 500;
 /** How long the toast stays. */
 const TOAST_TIME = 8000;
+/** How many assessments one row fetch asks for (L2). */
+const BATCH = 25;
 
 /**
  * Interactive things inside a row line; clicking them never toggles the row.
@@ -107,6 +114,11 @@ class Hub {
         // What a test runner waits for while a timer runs (core/pending), by timer.
         this.waiting = {};
         this.suggestIndex = -1;
+        // Rows still to fetch for the open view, and how far the fetch has got (L2).
+        this.queue = [];
+        this.total = 0;
+        this.fetched = 0;
+        this.loadingRows = false;
         root.addEventListener('click', e => this.click(e));
         // Opening an Ignore menu or the view menu again puts an unconfirmed item back. Captured, because
         // Bootstrap stops the toggle's click once its dropdown has opened.
@@ -128,6 +140,7 @@ class Hub {
         root.addEventListener('submit', e => this.submit(e));
         root.addEventListener('focusout', e => this.focusout(e));
         this.tips = new Tips(root);
+        this.loadRows();
         this.apply();
         this.renderChips().catch(Notification.exception);
         localise(root).catch(Notification.exception);
@@ -212,6 +225,7 @@ class Hub {
             'reason': () => this.toggleFilter(`r:${target.dataset.reason}`),
             'toggle-row': () => this.toggleRow(target.closest(SELECTORS.row)),
             'refresh': () => this.load(`${COMPONENT}_refresh`, {}),
+            'retry-rows': () => this.retryRows(),
             'clear-person': () => this.load(`${COMPONENT}_get_view`, {personid: 0}),
             'chip-mode': () => this.setWordMode(parseInt(target.dataset.index, 10), target.dataset.mode),
             'chip-remove': () => this.removeChip(target.dataset.filter, target.dataset.index),
@@ -858,15 +872,17 @@ class Hub {
                 this.applyRow(row);
             });
             anyMatch = anyMatch || matches > 0;
-            group.hidden = matches === 0;
+            group.hidden = matches === 0 && !this.loadingRows;
             group.classList.toggle('hub-group--collapsed', collapsed);
             const toggle = group.querySelector('[data-action="toggle-group"]');
             if (toggle) {
                 toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
             }
+            // While rows are still arriving a count is not known yet (L1).
+            const shown = this.loadingRows && matches === 0 ? '\u2026' : String(matches);
             const count = group.querySelector('[data-region="hub-group-count"]');
             if (count) {
-                count.textContent = matches;
+                count.textContent = shown;
             }
             group.querySelectorAll('[data-action="reason"]').forEach(button => {
                 const n = reasons[button.dataset.reason] || 0;
@@ -876,12 +892,12 @@ class Hub {
             });
             const pill = view.querySelector(`[data-action="jump"][data-group="${key}"] [data-region="hub-strip-count"]`);
             if (pill) {
-                pill.textContent = matches;
+                pill.textContent = shown;
             }
         });
         const empty = view.querySelector(SELECTORS.filterEmpty);
         if (empty) {
-            empty.hidden = !filtering || anyMatch;
+            empty.hidden = !filtering || anyMatch || this.loadingRows;
         }
     }
 
@@ -994,11 +1010,17 @@ class Hub {
      * @param {boolean} select Whether to select that control's text.
      */
     openEditor(focus = null, select = false) {
-        const panel = this.root.querySelector(SELECTORS.editor);
-        const scrim = this.root.querySelector(SELECTORS.scrim);
-        if (!panel) {
+        if (!this.root.querySelector(SELECTORS.editor)) {
+            this.ensureEditor().then(ok => {
+                if (ok) {
+                    this.openEditor(focus, select);
+                }
+                return ok;
+            }).catch(Notification.exception);
             return;
         }
+        const panel = this.root.querySelector(SELECTORS.editor);
+        const scrim = this.root.querySelector(SELECTORS.scrim);
         this.panelOpen = true;
         panel.hidden = false;
         if (scrim) {
@@ -1159,14 +1181,15 @@ class Hub {
         const seq = ++this.seq;
         this.refreshing = this.refreshing || isrefresh;
         const state = this.readState();
-        const call = {viewid: state.viewid, yearid: state.yearid, type: this.type, personid: state.personid, ...args};
+        const call = {viewid: state.viewid, yearid: state.yearid, type: this.type, personid: state.personid,
+            witheditor: this.panelOpen, ...args};
         const kept = this.keep(focus);
         this.busy(true);
         try {
             const [result] = Ajax.call([{methodname, args: call}]);
             const response = await result;
             if (seq === this.seq) {
-                this.show(response.html, kept);
+                this.show(response.html, kept, response.editor || '');
                 this.say(await getString(isrefresh ? 'statusrefreshed' : 'statusloaded', COMPONENT));
             }
         } catch (error) {
@@ -1223,11 +1246,13 @@ class Hub {
      *
      * @param {string} html
      * @param {Object} kept From keep().
+     * @param {string} editor The rendered editor, when the reply carried it (L4).
      */
-    show(html, kept) {
+    show(html, kept, editor = '') {
         const container = this.root.querySelector(SELECTORS.view);
         container.innerHTML = html;
         this.readState();
+        this.placeEditor(editor);
         if (this.type !== this.state.type) {
             this.type = this.state.type;
         }
@@ -1238,6 +1263,193 @@ class Hub {
         this.renderChips().catch(Notification.exception);
         localise(this.root).catch(Notification.exception);
         this.restore(kept);
+        this.loadRows();
+    }
+
+    // --- Rows in batches (L2, L3) ----------------------------------------------------------------------
+
+    /**
+     * Starts fetching the rows the frame lists, a batch at a time.
+     */
+    loadRows() {
+        const view = this.viewRoot;
+        const ids = view ? (view.dataset.cmids || '').split(',').filter(Boolean).map(Number) : [];
+        this.queue = ids;
+        this.total = ids.length;
+        this.fetched = 0;
+        this.loadingRows = ids.length > 0;
+        this.showBudget(false);
+        this.progress();
+        if (this.loadingRows) {
+            this.fetchRows().catch(Notification.exception);
+        }
+    }
+
+    /**
+     * Fetches the queued rows, batch by batch, until the queue is empty or a batch runs past the budget (L3).
+     */
+    async fetchRows() {
+        const seq = this.seq;
+        const pending = new Pending(`${COMPONENT}/rows`);
+        try {
+            while (this.queue.length) {
+                const batch = this.queue.slice(0, BATCH);
+                const state = this.readState();
+                const [result] = Ajax.call([{methodname: `${COMPONENT}_get_rows`, args: {cmids: batch, viewid: state.viewid,
+                    yearid: state.yearid, type: this.type, personid: state.personid}}]);
+                const reply = await this.withinBudget(result);
+                if (seq !== this.seq) {
+                    // A newer view took over.
+                    return;
+                }
+                if (reply === null) {
+                    this.showBudget(true);
+                    return;
+                }
+                this.queue = this.queue.slice(batch.length);
+                this.fetched += batch.length;
+                this.insertRows(reply.html);
+                this.progress();
+            }
+            this.loadingRows = false;
+            this.progress();
+            this.apply();
+            this.say(await getString('statusloaded', COMPONENT));
+        } catch (error) {
+            this.loadingRows = false;
+            this.progress();
+            this.apply();
+            Notification.exception(error);
+        } finally {
+            pending.resolve();
+        }
+    }
+
+    /**
+     * Resolves with the reply, or with null once the budget has run out first.
+     *
+     * @param {Promise} promise
+     * @returns {Promise<Object|null>}
+     */
+    withinBudget(promise) {
+        const view = this.viewRoot;
+        const seconds = Math.max(1, parseInt(view && view.dataset.budget, 10) || 20);
+        let timer = null;
+        const out = new Promise(resolve => {
+            timer = setTimeout(() => resolve(null), seconds * 1000);
+        });
+        return Promise.race([promise, out]).finally(() => clearTimeout(timer));
+    }
+
+    /**
+     * Retry after the budget ran out: carries on from the batch that was waiting.
+     */
+    retryRows() {
+        this.showBudget(false);
+        if (this.queue.length) {
+            this.fetchRows().catch(Notification.exception);
+        }
+    }
+
+    /**
+     * Shows or hides the "still loading" message with its Retry.
+     *
+     * @param {boolean} on
+     */
+    showBudget(on) {
+        const box = this.root.querySelector(SELECTORS.budget);
+        if (!box) {
+            return;
+        }
+        box.hidden = !on;
+        if (on) {
+            getString('budget_over', COMPONENT, this.total).then(text => {
+                box.querySelector(SELECTORS.budgetText).textContent = text;
+                this.say(text);
+                return text;
+            }).catch(Notification.exception);
+        }
+    }
+
+    /**
+     * The "Loading n of m" line, shown while rows are on their way.
+     */
+    progress() {
+        const line = this.root.querySelector(SELECTORS.progress);
+        if (!line) {
+            return;
+        }
+        line.hidden = !this.loadingRows;
+        if (this.loadingRows && this.fetched > 0) {
+            getString('loading_rows', COMPONENT, {done: this.fetched, total: this.total}).then(text => {
+                line.querySelector(SELECTORS.progressText).textContent = text;
+                return text;
+            }).catch(Notification.exception);
+        }
+    }
+
+    /**
+     * Puts fetched rows into their groups, each in its place by sort key.
+     *
+     * @param {string} html List items from the rowitem template.
+     */
+    insertRows(html) {
+        const holder = document.createElement('template');
+        holder.innerHTML = html;
+        Array.from(holder.content.querySelectorAll(SELECTORS.row)).forEach(row => {
+            const list = this.root.querySelector(`#hub-group-${row.dataset.group}-list`);
+            if (!list) {
+                return;
+            }
+            const key = parseInt(row.dataset.sortkey, 10) || 0;
+            const search = row.dataset.search || '';
+            let before = null;
+            for (const other of list.children) {
+                const otherKey = parseInt(other.dataset.sortkey, 10) || 0;
+                if (otherKey > key || (otherKey === key && (other.dataset.search || '') > search)) {
+                    before = other;
+                    break;
+                }
+            }
+            list.insertBefore(row, before);
+        });
+        this.apply();
+        localise(this.root).catch(Notification.exception);
+    }
+
+    /**
+     * Puts a rendered editor in its slot (L4), or leaves the slot as the frame had it.
+     *
+     * @param {string} editor
+     */
+    placeEditor(editor) {
+        const slot = this.root.querySelector(SELECTORS.editorSlot);
+        if (slot && editor) {
+            slot.innerHTML = editor;
+        }
+    }
+
+    /**
+     * Fetches the editor for the open view when the frame came without it (L4).
+     *
+     * @returns {Promise<boolean>} Whether there is an editor to open.
+     */
+    async ensureEditor() {
+        if (this.root.querySelector(SELECTORS.editor)) {
+            return true;
+        }
+        const pending = new Pending(`${COMPONENT}/editor`);
+        try {
+            const state = this.readState();
+            const [result] = Ajax.call([{methodname: `${COMPONENT}_get_view`, args: {viewid: state.viewid, yearid: state.yearid,
+                type: this.type, personid: state.personid, witheditor: true}}]);
+            const reply = await result;
+            this.placeEditor(reply.editor || '');
+            localise(this.root).catch(Notification.exception);
+        } finally {
+            pending.resolve();
+        }
+        return Boolean(this.root.querySelector(SELECTORS.editor));
     }
 
     /**
