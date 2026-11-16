@@ -307,13 +307,16 @@ final class views {
         $ors = [];
         $params = [];
         $i = 0;
-        foreach ($view->cat as $catid) {
-            // The category and everything under it (D3).
-            $k = $p . 'c' . ++$i;
-            $ors[] = "co.category IN (SELECT cc.id FROM {course_categories} cc WHERE cc.id = :$k OR " .
-                $DB->sql_like('cc.path', ":{$k}p", false, false) . ')';
-            $params[$k] = (int)$catid;
-            $params[$k . 'p'] = '%/' . (int)$catid . '/%';
+        if ($view->cat) {
+            // The category and everything under it (D3): the ids are resolved from the cached tree, so the planner
+            // can use the index on course.category (L6).
+            [$insql, $inparams] = $DB->get_in_or_equal(
+                categories::with_descendants($view->cat),
+                SQL_PARAMS_NAMED,
+                $p . 'c'
+            );
+            $ors[] = "co.category $insql";
+            $params += $inparams;
         }
         foreach ($view->starts as $text) {
             $k = $p . 's' . ++$i;
@@ -410,13 +413,7 @@ final class views {
      * @return array[] id, name, depth, parent
      */
     public static function categories(): array {
-        global $DB;
-        $out = [];
-        foreach ($DB->get_records('course_categories', null, 'sortorder ASC', 'id, name, parent, depth') as $cat) {
-            $out[] = ['id' => (int)$cat->id, 'name' => format_string($cat->name, true, ['escape' => false]),
-                'depth' => (int)$cat->depth, 'parent' => (int)$cat->parent];
-        }
-        return $out;
+        return categories::tree();
     }
 
     /**

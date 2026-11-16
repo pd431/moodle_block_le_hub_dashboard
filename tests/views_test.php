@@ -17,6 +17,7 @@
 namespace block_le_hub_dashboard;
 
 use block_le_hub_dashboard\local\config;
+use block_le_hub_dashboard\local\categories;
 use block_le_hub_dashboard\local\views;
 
 /**
@@ -27,6 +28,7 @@ use block_le_hub_dashboard\local\views;
  * @copyright  2026 Pierre Camaly de Brosses - University of Exeter
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \block_le_hub_dashboard\local\views
+ * @covers     \block_le_hub_dashboard\local\categories
  */
 final class views_test extends \advanced_testcase {
     /** @var \stdClass[] Courses by short name. */
@@ -124,6 +126,35 @@ final class views_test extends \advanced_testcase {
             }
         }
         return views::get($id, $userid);
+    }
+
+    /**
+     * The category match is an IN on course.category, resolved from the cached tree, not a LIKE on the path (L6):
+     * a parent takes everything under it, a category the site lost matches nothing, and the tree is read once.
+     */
+    public function test_category_match_is_an_id_list(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->fixtures();
+        $u = (int)$this->getDataGenerator()->create_user()->id;
+        $view = $this->view($u, ['cat' => [$this->cats['Science']->id]]);
+        [$sql, $params] = views::in_view_sql($view);
+        $this->assertStringNotContainsStringIgnoringCase('like', $sql);
+        $this->assertStringContainsString('co.category IN', $sql);
+        $this->assertEqualsCanonicalizing(
+            [(int)$this->cats['Science']->id, (int)$this->cats['Biology']->id],
+            categories::with_descendants([$this->cats['Science']->id])
+        );
+        $this->assertSame(['BIO1', 'PHY1'], $this->sql_picks($view));
+        $this->assertSame($this->php_picks($view), $this->sql_picks($view));
+
+        $gone = $this->view($u, ['cat' => [999999]]);
+        $this->assertSame([], $this->sql_picks($gone));
+
+        $reads = $DB->perf_get_reads();
+        categories::with_descendants([$this->cats['Arts']->id]);
+        categories::tree();
+        $this->assertSame($reads, $DB->perf_get_reads());
     }
 
     /**
