@@ -707,7 +707,7 @@ class behat_block_le_hub_dashboard extends behat_base {
             line.querySelectorAll('*').forEach(function (el) {
                 if (el.closest('.ma-row-modicon, [data-region=\"hub-stack\"], .hub-flaglist, .ma-tip')) { return; }
                 var bg = getComputedStyle(el).backgroundColor;
-                if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') { out.push(el.className + ': ' + bg); }
+                if (bg && bg !== 'transparent' && !/^rgba\\(.*,\\s*0\\)$/.test(bg)) { out.push(el.className + ': ' + bg); }
             });
             return out; })()");
         if ($found) {
@@ -1743,14 +1743,22 @@ class behat_block_le_hub_dashboard extends behat_base {
     // Loading (L1 to L4).
 
     /**
-     * The hub's rows take "<n>" seconds to load: the first batch is held that long, then the rest arrive as usual.
+     * The hub's rows take "<n>" seconds to load: every batch is held that long, until they load at once again.
      *
      * @Given /^the hub's rows take "(?P<seconds>\d+)" seconds to load$/
      * @param int $seconds
      */
     public function rows_take_seconds(int $seconds): void {
         set_config('testslowrows', $seconds, 'block_le_hub_dashboard');
-        set_config('testslowonce', 1, 'block_le_hub_dashboard');
+    }
+
+    /**
+     * The hub's rows load at once again: the server has caught up, so a Retry gets through.
+     *
+     * @Given /^the hub's rows load at once again$/
+     */
+    public function rows_load_at_once(): void {
+        set_config('testslowrows', 0, 'block_le_hub_dashboard');
     }
 
     /**

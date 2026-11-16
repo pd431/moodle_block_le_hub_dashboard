@@ -158,7 +158,7 @@ Feature: A collapsed row is one line of aligned columns, and opens for the detai
     And the collapsed row "Problem sheet 4" should show the flag count "3 flags"
     And the collapsed row "Problem sheet 4" should not show any pill
     When I click on the flag count of "Problem sheet 4"
-    Then I should see "1 individual deadline" in the "Hub dashboard" block
+    Then the collapsed row "Problem sheet 4" should show the icon flags "1 individual deadline, No allocation"
     When I expand the row "Problem sheet 4"
     Then the expanded row "Problem sheet 4" should list what has happened in date order
     And the expanded row "Problem sheet 4" should show the bars "Submitted, Marked, Released"

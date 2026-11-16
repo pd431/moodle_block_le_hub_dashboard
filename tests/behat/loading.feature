@@ -32,7 +32,8 @@ Feature: The hub shows its frame at once and fetches the rows afterwards
     When I log in as "hub1" and view the "Hub dashboard"
     Then I should see "Still loading: this view covers 28 assessments" in the "Hub dashboard" block
     And there should not be a hub row "Problem sheet 4"
-    When I click on "Retry" "button" in the "Hub dashboard" "block"
+    When the hub's rows load at once again
+    And I click on "Retry" "button" in the "Hub dashboard" "block"
     And the hub has finished loading
     Then there should be a hub row "Problem sheet 4"
     And there should be a hub row "Problem sheet 5"

@@ -34,6 +34,8 @@ Feature: The administrator sets the categories the hub works in
     And a summative "assign" "Essay" in "HIS1" was due "3 days ago" with marking due "in 10 days"
     When I log in as "hub1" and view the "Hub dashboard"
     And I add the module "HIS1" to the hub view
+    And I click on "This view" "button" in the "Hub dashboard" "block"
+    And I click on "Edit what this view shows" "link" in the "Hub dashboard" "block"
     Then the view editor should mark "HIS1" as outside the hub's categories
     And there should not be a hub row "Essay"
 
@@ -41,10 +43,8 @@ Feature: The administrator sets the categories the hub works in
     Given the hub's valid categories are "Faculty of Science / Biosciences"
     And a summative "assign" "Essay" in "HIS1" was due "3 days ago" with marking due "in 10 days"
     And "student1" has submitted "Essay"
-    And "student1" is allocated to "marker1" on "Essay"
-    And "student1" is allocated to "marker1" on "Problem sheet 4"
     When I log in as "hub1" and view the "Hub dashboard"
-    And I search the hub dashboard for the person "Mo Marker"
+    And I search the hub dashboard for the person "Sam Student"
     Then there should be a hub row "Problem sheet 4"
     And there should not be a hub row "Essay"
 

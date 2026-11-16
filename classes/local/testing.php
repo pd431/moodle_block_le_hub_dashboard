@@ -45,8 +45,7 @@ final class testing {
     }
 
     /**
-     * Holds a row fetch for the seconds a test asked for (`testslowrows`), once only when it asked for that
-     * (`testslowonce`), so a Retry after the budget runs out gets through.
+     * Holds a row fetch for the seconds a test asked for (`testslowrows`).
      */
     public static function slow_rows(): void {
         if (!self::enabled()) {
@@ -55,9 +54,6 @@ final class testing {
         $seconds = (int)get_config('block_le_hub_dashboard', 'testslowrows');
         if ($seconds <= 0) {
             return;
-        }
-        if (get_config('block_le_hub_dashboard', 'testslowonce')) {
-            set_config('testslowrows', 0, 'block_le_hub_dashboard');
         }
         sleep($seconds);
     }
