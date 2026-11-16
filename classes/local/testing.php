@@ -45,7 +45,8 @@ final class testing {
     }
 
     /**
-     * Holds a row fetch for the seconds a test asked for (`testslowrows`).
+     * Holds a row fetch for the seconds a test asked for (`testslowrows`). The session is let go first, as a
+     * read-only session would be, so the page's other requests are not queued behind the wait.
      */
     public static function slow_rows(): void {
         if (!self::enabled()) {
@@ -55,6 +56,7 @@ final class testing {
         if ($seconds <= 0) {
             return;
         }
+        \core\session\manager::write_close();
         sleep($seconds);
     }
 }

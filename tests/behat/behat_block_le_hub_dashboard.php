@@ -653,7 +653,8 @@ class behat_block_le_hub_dashboard extends behat_base {
         $count = $this->row($name)->find('css', '[data-region="hub-flagcount"]');
         $actual = $count ? trim($count->getText()) : '';
         if ($actual !== $text) {
-            throw new ExpectationException("'$name' shows the flag count '$actual'", $this->getSession());
+            $names = implode(', ', $this->flag_names($name));
+            throw new ExpectationException("'$name' shows the flag count '$actual' ($names)", $this->getSession());
         }
     }
 
