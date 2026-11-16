@@ -424,8 +424,23 @@ class behat_block_le_hub_dashboard extends behat_base {
      * @param string $name
      */
     public function there_should_be_a_hub_row(string $not, string $name): void {
-        $step = $not ? 'should_not_exist' : 'should_exist';
-        $this->execute('behat_general::' . $step, [self::row_xpath($name), 'xpath_element']);
+        if (!$this->running_javascript()) {
+            $step = $not ? 'should_not_exist' : 'should_exist';
+            $this->execute('behat_general::' . $step, [self::row_xpath($name), 'xpath_element']);
+            return;
+        }
+        // In a browser a row that Find or a filter has hidden is not there for the reader either.
+        $this->spin(function ($context) use ($not, $name) {
+            $row = $context->getSession()->getPage()->find('xpath', self::row_xpath($name));
+            $shown = $row && $row->isVisible();
+            if ($shown === (bool) $not) {
+                throw new ExpectationException(
+                    "The hub row '$name' is " . ($shown ? 'shown' : 'not shown'),
+                    $context->getSession()
+                );
+            }
+            return true;
+        });
     }
 
     /**
@@ -458,7 +473,7 @@ class behat_block_le_hub_dashboard extends behat_base {
             throw new ExpectationException("'$name' is not in '$group'", $this->getSession());
         }
         if ($reason !== '') {
-            $tag = $row->find('xpath', ".//*[contains(@class, 'hub-reason')][1]");
+            $tag = $row->find('xpath', ".//*[contains(concat(' ', normalize-space(@class), ' '), ' hub-reason ')][1]");
             if (!$tag || trim($tag->getText()) !== $reason) {
                 throw new ExpectationException(
                     "'$name' leads with '" . ($tag ? $tag->getText() : '') . "', not '$reason'",
@@ -487,7 +502,8 @@ class behat_block_le_hub_dashboard extends behat_base {
      * @param string $reason
      */
     public function collapsed_row_should_show_reason_tag(string $name, string $reason): void {
-        foreach ($this->row($name)->findAll('xpath', ".//*[contains(@class, 'hub-reason')]") as $tag) {
+        $xpath = ".//*[contains(concat(' ', normalize-space(@class), ' '), ' hub-reason ')]";
+        foreach ($this->row($name)->findAll('xpath', $xpath) as $tag) {
             if (trim($tag->getText()) === $reason) {
                 return;
             }
@@ -608,8 +624,135 @@ class behat_block_le_hub_dashboard extends behat_base {
         if (!$button) {
             throw new ExpectationException("No '$flag' flag on '$name'", $this->getSession());
         }
+        if (!$button->isVisible()) {
+            $this->i_click_on_the_flag_count($name);
+        }
         $button->click();
         $this->wait_for_pending_js();
+    }
+
+    /**
+     * I click on the flag count of "<name>" (R1): opens the row's list of flags.
+     *
+     * @When /^I click on the flag count of "(?P<name>[^"]*)"$/
+     * @param string $name
+     */
+    public function i_click_on_the_flag_count(string $name): void {
+        $this->row($name)->find('css', '[data-action="flags"]')->click();
+        $this->wait_for_pending_js();
+    }
+
+    /**
+     * The collapsed row "<name>" should show the flag count "<text>" (R1).
+     *
+     * @Then /^the collapsed row "(?P<name>[^"]*)" should show the flag count "(?P<text>[^"]*)"$/
+     * @param string $name
+     * @param string $text
+     */
+    public function collapsed_row_should_show_flag_count(string $name, string $text): void {
+        $count = $this->row($name)->find('css', '[data-region="hub-flagcount"]');
+        $actual = $count ? trim($count->getText()) : '';
+        if ($actual !== $text) {
+            $names = implode(', ', $this->flag_names($name));
+            throw new ExpectationException("'$name' shows the flag count '$actual' ($names)", $this->getSession());
+        }
+    }
+
+    /**
+     * The collapsed row "<name>" should show the reason text "<reason>" (R1): bold text leading the status cell.
+     *
+     * @Then /^the collapsed row "(?P<name>[^"]*)" should show the reason text "(?P<reason>[^"]*)"$/
+     * @param string $name
+     * @param string $reason
+     */
+    public function collapsed_row_should_show_reason_text(string $name, string $reason): void {
+        $cell = $this->row($name)->find('css', '.hub-col--status');
+        $lead = $cell ? $cell->find('css', '[data-region="hub-row-reasons"] .hub-reason') : null;
+        if (!$lead || trim($lead->getText()) !== $reason) {
+            $text = $lead ? $lead->getText() : '';
+            throw new ExpectationException("'$name' leads its status with '$text'", $this->getSession());
+        }
+        $weight = $this->getSession()->evaluateScript("return getComputedStyle(document.querySelector('" . self::BLOCK .
+            " [data-region=\"hub-row\"] [data-region=\"hub-row-reasons\"] .hub-reason')).fontWeight;");
+        if ((int)$weight < 600) {
+            throw new ExpectationException("The reason text is not bold ($weight)", $this->getSession());
+        }
+    }
+
+    /**
+     * The collapsed row "<name>" should not show any pill (R1).
+     *
+     * @Then /^the collapsed row "(?P<name>[^"]*)" should not show any pill$/
+     * @param string $name
+     */
+    public function collapsed_row_should_not_show_any_pill(string $name): void {
+        $pills = $this->row($name)->findAll('css', '[data-region="hub-row-line"] .badge, [data-region="hub-row-line"] .ma-pill');
+        $visible = array_filter($pills, fn($p) => $p->isVisible());
+        if ($visible) {
+            throw new ExpectationException("'$name' shows " . count($visible) . ' pill(s)', $this->getSession());
+        }
+    }
+
+    /**
+     * The collapsed row "<name>" should use no accent colour (R1): no background behind any part of the line but
+     * the type icon and the bar, and no coloured text but links.
+     *
+     * @Then /^the collapsed row "(?P<name>[^"]*)" should use no accent colour$/
+     * @param string $name
+     */
+    public function collapsed_row_should_use_no_accent(string $name): void {
+        $id = $this->row($name)->getAttribute('id');
+        $found = $this->getSession()->evaluateScript("(function () {
+            var line = document.querySelector('#" . $id . " [data-region=\"hub-row-line\"]');
+            var out = [];
+            line.querySelectorAll('*').forEach(function (el) {
+                if (el.closest('.ma-row-modicon, [data-region=\"hub-stack\"], .hub-flaglist, .ma-tip')) { return; }
+                var bg = getComputedStyle(el).backgroundColor;
+                if (bg && bg !== 'transparent' && !/^rgba\\(.*,\\s*0\\)$/.test(bg)) { out.push(el.className + ': ' + bg); }
+            });
+            return out; })()");
+        if ($found) {
+            throw new ExpectationException("'$name' carries colour: " . implode('; ', $found), $this->getSession());
+        }
+    }
+
+    /**
+     * The "<group>" group header should carry the group's colour (R1): a tinted band, unlike the rows.
+     *
+     * @Then /^the "(?P<group>[^"]*)" group header should carry the group's colour$/
+     * @param string $group
+     */
+    public function group_header_should_carry_colour(string $group): void {
+        $colours = $this->getSession()->evaluateScript("(function () {
+            var header = Array.from(document.querySelectorAll('" . self::BLOCK . " [data-region=\"hub-group-header\"]'))
+                .find(function (h) { return h.querySelector('.hub-group-title').textContent.trim() === " .
+                json_encode($group) . "; });
+            var row = document.querySelector('" . self::BLOCK . " [data-region=\"hub-row-line\"]');
+            var c = document.createElement('canvas').getContext('2d');
+            var s = getComputedStyle(header);
+            return {header: s.backgroundColor + ' ' + s.backgroundImage, row: getComputedStyle(row).backgroundColor}; })()");
+        if (!$colours || $colours['header'] === $colours['row'] . ' none') {
+            throw new ExpectationException("The '$group' header is not tinted: " . json_encode($colours), $this->getSession());
+        }
+    }
+
+    /**
+     * The expanded row "<name>" should list what has happened in date order (R1).
+     *
+     * @Then /^the expanded row "(?P<name>[^"]*)" should list what has happened in date order$/
+     * @param string $name
+     */
+    public function expanded_row_should_list_what_has_happened(string $name): void {
+        $items = $this->row($name)->findAll('css', '[data-region="hub-happened"] .hub-happened-item');
+        if (!$items) {
+            throw new ExpectationException("'$name' lists nothing under What has happened", $this->getSession());
+        }
+        $times = array_map(fn($i) => (int)$i->getAttribute('data-time'), $items);
+        $sorted = $times;
+        sort($sorted);
+        if ($times !== $sorted) {
+            throw new ExpectationException('What has happened is not in date order: ' . implode(', ', $times), $this->getSession());
+        }
     }
 
     /**
@@ -806,7 +949,7 @@ class behat_block_le_hub_dashboard extends behat_base {
         $parts = [trim($header->find('xpath', ".//*[contains(@class, 'hub-group-title')]")->getText()) . ' ' .
             trim($header->find('xpath', ".//*[@data-region='hub-group-count']")->getText())];
         foreach ($header->findAll('xpath', ".//button[@data-action='reason']") as $button) {
-            if ($button->isVisible()) {
+            if ($this->running_javascript() ? $button->isVisible() : !$button->hasAttribute('hidden')) {
                 $parts[] = trim(preg_replace('/\s+/', ' ', $button->getText()));
             }
         }
@@ -941,9 +1084,10 @@ class behat_block_le_hub_dashboard extends behat_base {
         $this->getSession()->executeScript("document.querySelector('" . self::BLOCK
             . " [data-action=\"find\"]').dispatchEvent(new Event('input', {bubbles: true}))");
         $this->wait_for_pending_js();
-        // The Find box waits a moment after typing before asking the server.
+        // The Find box waits a moment after typing before narrowing the list and asking the server.
         $this->getSession()->wait(1000, "document.querySelector('" . self::BLOCK
             . " [data-region=\"hub-suggest\"]:not([hidden])')");
+        $this->wait_for_pending_js();
     }
 
     /**
@@ -1214,20 +1358,37 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
-     * The "Module" column of every collapsed row should start at the same x position.
+     * The "<column>" column of every collapsed row should start at the same x position (A1).
      *
-     * @Then /^the "Module" column of every collapsed row should start at the same x position$/
+     * @Then /^the "(?P<column>Module|Status|Progress|Flags)" column of every collapsed row should start at the same x position$/
+     * @param string $column
      */
-    public function module_columns_aligned(): void {
+    public function columns_aligned(string $column): void {
+        $class = '.hub-col--' . strtolower($column);
         $lefts = $this->getSession()->evaluateScript("(function () {
             return Array.from(document.querySelectorAll('" . self::BLOCK
-                . " li[data-region=\"hub-row\"]:not([hidden]) .hub-col--module'))
+                . " li[data-region=\"hub-row\"]:not([hidden]) $class'))
                 .map(function (el) { return Math.round(el.getBoundingClientRect().left); }); })()");
         if (count(array_unique($lefts)) > 1) {
             throw new ExpectationException(
-                'The Module column starts at ' . implode(', ', array_unique($lefts)),
+                "The $column column starts at " . implode(', ', array_unique($lefts)),
                 $this->getSession()
             );
+        }
+    }
+
+    /**
+     * Every collapsed row's stacked bar should be the same width (A1).
+     *
+     * @Then /^every collapsed row's stacked bar should be the same width$/
+     */
+    public function stacked_bars_same_width(): void {
+        $widths = $this->getSession()->evaluateScript("(function () {
+            return Array.from(document.querySelectorAll('" . self::BLOCK
+                . " li[data-region=\"hub-row\"]:not([hidden]) [data-region=\"hub-stack\"]'))
+                .map(function (el) { return Math.round(el.getBoundingClientRect().width); }); })()");
+        if (count($widths) < 2 || count(array_unique($widths)) > 1) {
+            throw new ExpectationException('The stacked bars are ' . implode(', ', $widths) . ' wide', $this->getSession());
         }
     }
 
@@ -1267,22 +1428,6 @@ class behat_block_le_hub_dashboard extends behat_base {
             return row.getBoundingClientRect().top - block.getBoundingClientRect().top; })()");
         if ($distance > (int)$px) {
             throw new ExpectationException("The first row is $distance pixels down", $this->getSession());
-        }
-    }
-
-    /**
-     * The first assessment row should still be visible.
-     *
-     * @Then /^the first assessment row should still be visible$/
-     */
-    public function first_row_visible(): void {
-        $visible = $this->getSession()->evaluateScript("(function () {
-            var row = document.querySelector('" . self::BLOCK . " li[data-region=\"hub-row\"]:not([hidden])');
-            var r = row.getBoundingClientRect();
-            var panel = document.querySelector('" . self::BLOCK . " [data-region=\"hub-editor\"]').getBoundingClientRect();
-            return r.left < panel.left && r.top >= 0 && r.bottom <= window.innerHeight; })()");
-        if (!$visible) {
-            throw new ExpectationException('The first row is hidden behind the editor', $this->getSession());
         }
     }
 
@@ -1348,18 +1493,6 @@ class behat_block_le_hub_dashboard extends behat_base {
             return {top: header.getBoundingClientRect().top, section: s.getBoundingClientRect().top}; })()");
         if ($top['top'] < 0 || $top['top'] > 80 || $top['section'] >= $top['top']) {
             throw new ExpectationException("The '$group' header is at " . $top['top'] . ' pixels', $this->getSession());
-        }
-    }
-
-    /**
-     * The view editor should open as a side panel.
-     *
-     * @Then /^the view editor should open as a side panel$/
-     */
-    public function editor_is_a_side_panel(): void {
-        $panel = $this->find('css', self::BLOCK . ' [data-region="hub-editor"]');
-        if (!$panel->isVisible()) {
-            throw new ExpectationException('The view editor is not open', $this->getSession());
         }
     }
 
@@ -1606,5 +1739,504 @@ class behat_block_le_hub_dashboard extends behat_base {
         }
         $row->find('css', '[data-action="save-note"]')->click();
         $this->wait_for_pending_js();
+    }
+
+    // Loading (L1 to L4).
+
+    /**
+     * The hub's rows take "<n>" seconds to load: every batch is held that long, until they load at once again.
+     *
+     * @Given /^the hub's rows take "(?P<seconds>\d+)" seconds to load$/
+     * @param int $seconds
+     */
+    public function rows_take_seconds(int $seconds): void {
+        set_config('testslowrows', $seconds, 'block_le_hub_dashboard');
+    }
+
+    /**
+     * The hub's rows load at once again: the server has caught up, so a Retry gets through.
+     *
+     * @Given /^the hub's rows load at once again$/
+     */
+    public function rows_load_at_once(): void {
+        set_config('testslowrows', 0, 'block_le_hub_dashboard');
+    }
+
+    /**
+     * The hub's load budget is "<n>" seconds.
+     *
+     * @Given /^the hub's load budget is "(?P<seconds>\d+)" seconds$/
+     * @param int $seconds
+     */
+    public function load_budget_is(int $seconds): void {
+        set_config('loadseconds', $seconds, 'block_le_hub_dashboard');
+    }
+
+    /**
+     * The hub has finished loading: the progress line has gone and no batch is waiting on Retry.
+     *
+     * @When /^the hub has finished loading$/
+     */
+    public function hub_has_finished_loading(): void {
+        $this->spin(function ($context) {
+            $page = $context->getSession()->getPage();
+            $progress = $page->find('css', self::BLOCK . ' [data-region="hub-progress"]');
+            $budget = $page->find('css', self::BLOCK . ' [data-region="hub-budget"]');
+            if (($progress && $progress->isVisible()) || ($budget && $budget->isVisible())) {
+                throw new ExpectationException('The hub is still loading', $context->getSession());
+            }
+            return true;
+        }, [], 30);
+        $this->wait_for_pending_js();
+    }
+
+    /**
+     * The page should not contain the department tree: the editor is fetched when it opens (L4).
+     *
+     * @Then /^the page should not contain the department tree$/
+     */
+    public function page_should_not_contain_the_tree(): void {
+        $this->execute('behat_general::should_not_exist', [self::BLOCK . ' .hub-tree', 'css_element']);
+    }
+
+    // Categories the hub works in (C1).
+
+    /**
+     * The hub's valid categories are "<paths>".
+     *
+     * @Given /^the hub's valid categories are "(?P<paths>[^"]*)"$/
+     * @param string $paths
+     */
+    public function valid_categories(string $paths): void {
+        self::write('valid_categories', [$paths]);
+    }
+
+    /**
+     * The course category "<name>" exists under "<parent>".
+     *
+     * @Given /^the course category "(?P<name>[^"]*)" exists under "(?P<parent>[^"]*)"$/
+     * @param string $name
+     * @param string $parent
+     */
+    public function category_exists_under(string $name, string $parent): void {
+        self::write('category_exists_under', [$name, $parent]);
+    }
+
+    /**
+     * The module "<course>" in the category "<category>" has a summative "assign" "<name>" due "<due>": the course
+     * is created there. Worded apart from My assessments' "... is due" sentence, which would also match.
+     *
+     * @phpcs:ignore moodle.Files.LineLength.TooLong, moodle.Files.LineLength.MaxExceeded
+     * @Given /^the module "(?P<course>[^"]*)" in the category "(?P<category>[^"]*)" has an? (?P<tag>summative|formative) "(?P<mod>\w+)" "(?P<name>[^"]*)" due "(?P<due>[^"]*)"$/
+     * @param string $course
+     * @param string $category
+     * @param string $tag
+     * @param string $modname
+     * @param string $name
+     * @param string $due
+     */
+    public function assessment_in_category(
+        string $course,
+        string $category,
+        string $tag,
+        string $modname,
+        string $name,
+        string $due
+    ): void {
+        self::write('assessment_in_category', [$tag, $modname, $name, $course, $category, $due]);
+    }
+
+    /**
+     * I should not see "<text>" in the view editor under "<heading>".
+     *
+     * @Then /^I should not see "(?P<text>[^"]*)" in the view editor under "(?P<heading>[^"]*)"$/
+     * @param string $text
+     * @param string $heading
+     */
+    public function i_should_not_see_in_the_editor_under(string $text, string $heading): void {
+        $section = $this->find(
+            'xpath',
+            "//*[contains(@class, 'block_le_hub_dashboard')]//*[contains(@class, 'hub-panel-section')]" .
+            "[.//*[contains(@class, 'hub-panel-label')][normalize-space(.) = " . behat_context_helper::escape($heading) . ']]'
+        );
+        if (str_contains($section->getText(), $text)) {
+            throw new ExpectationException("'$text' is under '$heading' in the editor", $this->getSession());
+        }
+    }
+
+    /**
+     * The view editor should mark "<code>" as outside the hub's categories (C1).
+     *
+     * @Then /^the view editor should mark "(?P<code>[^"]*)" as outside the hub's categories$/
+     * @param string $code
+     */
+    public function editor_should_mark_outside(string $code): void {
+        $this->execute('behat_general::assert_element_contains_text', [
+            get_string('editor_outside', 'block_le_hub_dashboard', $code),
+            self::BLOCK . ' [data-region="hub-editor"] [data-region="hub-outside"]',
+            'css_element',
+        ]);
+    }
+
+    // The category pickers (C2, C3).
+
+    /**
+     * A tree item by its name, in the editor's picker or the setting's.
+     *
+     * @param string $name
+     * @return \Behat\Mink\Element\NodeElement
+     */
+    protected function tree_item(string $name): \Behat\Mink\Element\NodeElement {
+        return $this->find('xpath', "//*[@data-region='hub-catpicker']//label[@data-region='hub-tree-item']" .
+            "[.//*[contains(@class, 'hub-tree-name')][normalize-space(.) = " . behat_context_helper::escape($name) . ']]');
+    }
+
+    /**
+     * I tick/untick "<name>" in the department tree.
+     *
+     * @When /^I (?P<how>tick|untick) "(?P<name>[^"]*)" in the department tree$/
+     * @param string $how
+     * @param string $name
+     */
+    public function i_tick_in_the_tree(string $how, string $name): void {
+        $box = $this->tree_item($name)->find('css', 'input');
+        if ($box->isChecked() !== ($how === 'tick')) {
+            $box->click();
+        }
+        $this->wait_for_pending_js();
+    }
+
+    /**
+     * "<name>" should be (fully|partly) ticked, or not ticked, in the department tree.
+     *
+     * @Then /^"(?P<name>[^"]*)" should (?P<state>be ticked|be fully ticked|be partly ticked|not be ticked) in the department tree$/
+     * @param string $name
+     * @param string $state
+     */
+    public function should_be_ticked_in_the_tree(string $name, string $state): void {
+        $box = $this->tree_item($name)->find('css', 'input');
+        $checked = $box->isChecked();
+        $partial = (bool)$this->getSession()->evaluateScript(
+            "return document.querySelector('[data-region=\"hub-catpicker\"] input[value=\"" . $box->getAttribute('value') .
+            "\"]').indeterminate;"
+        );
+        $actual = $partial ? 'be partly ticked' : ($checked ? 'be fully ticked' : 'not be ticked');
+        $expected = $state === 'be ticked' ? 'be fully ticked' : $state;
+        if ($actual !== $expected) {
+            throw new ExpectationException("'$name' is '$actual', not '$expected'", $this->getSession());
+        }
+    }
+
+    /**
+     * The view's departments should be saved as "<names>": what the open view's category rules are, by name.
+     *
+     * @Then /^the view's departments should be saved as "(?P<names>[^"]*)"$/
+     * @param string $names
+     */
+    public function departments_saved_as(string $names): void {
+        global $DB;
+        $this->wait_for_pending_js();
+        $username = $this->getSession()->evaluateScript("return document.body.getAttribute('data-username') || '';");
+        $userid = $username ? \block_le_dashboard\fixture\steps::userid($username)
+            : (int)$DB->get_field('user', 'id', ['username' => 'hub1']);
+        $view = \block_le_hub_dashboard\local\views::current($userid);
+        $actual = [];
+        foreach ($view->cat as $id) {
+            $actual[] = $DB->get_field('course_categories', 'name', ['id' => $id]);
+        }
+        sort($actual);
+        $expected = array_map('trim', explode(',', $names));
+        sort($expected);
+        if ($actual !== $expected) {
+            throw new ExpectationException("The view's departments are '" . implode(', ', $actual) . "'", $this->getSession());
+        }
+    }
+
+    /**
+     * I type "<text>" in the department search box (the editor's) or the hub categories search box (the setting's).
+     *
+     * @When /^I type "(?P<text>[^"]*)" in the (?:department|hub categories) search box$/
+     * @param string $text
+     */
+    public function i_type_in_the_tree_search(string $text): void {
+        $box = $this->find('css', '[data-region="hub-catpicker"] [data-action="catpicker-search"]');
+        $box->setValue($text);
+        $box->keyPress(13);
+        $this->wait_for_pending_js();
+    }
+
+    /**
+     * The department tree (or categories picker) should <not>list "<names>".
+     *
+     * @Then /^the (?:department tree|categories picker) should (?P<not>not )?list "(?P<names>[^"]*)"$/
+     * @param string $not
+     * @param string $names
+     */
+    public function tree_should_list(string $not, string $names): void {
+        $visible = [];
+        foreach ($this->find_all('css', '[data-region="hub-catpicker"] [data-region="hub-tree-item"]') as $item) {
+            if ($item->isVisible()) {
+                $visible[] = trim($item->find('css', '.hub-tree-name')->getText());
+            }
+        }
+        foreach (array_map('trim', explode(',', $names)) as $name) {
+            if (in_array($name, $visible, true) === (bool)$not) {
+                throw new ExpectationException("The tree lists '" . implode(', ', $visible) . "'", $this->getSession());
+            }
+        }
+    }
+
+    // The editor as a dialog (E1).
+
+    /**
+     * The view editor should fill the window.
+     *
+     * @Then /^the view editor should fill the window$/
+     */
+    public function editor_should_fill_the_window(): void {
+        $fits = $this->getSession()->evaluateScript(
+            "return (function () { var r = document.querySelector('" . self::BLOCK . " [data-region=\"hub-editor\"]')" .
+            ".getBoundingClientRect(); var d = document.documentElement; return r.left <= 1 && r.top <= 1 && " .
+            "r.width >= d.clientWidth - 2 && r.height >= d.clientHeight - 2; })();"
+        );
+        if (!$fits) {
+            throw new ExpectationException('The view editor does not fill the window', $this->getSession());
+        }
+        $this->execute(
+            'behat_general::the_attribute_of_should_contain',
+            ['aria-modal', self::BLOCK . ' [data-region="hub-editor"]', 'css_element', 'true']
+        );
+    }
+
+    /**
+     * The view editor should have the columns "<headings>".
+     *
+     * @Then /^the view editor should have the columns "(?P<headings>[^"]*)"$/
+     * @param string $headings
+     */
+    public function editor_should_have_the_columns(string $headings): void {
+        $actual = [];
+        $tops = [];
+        foreach ($this->find_all('css', self::BLOCK . ' [data-region="hub-editor"] .hub-panel-colhead') as $heading) {
+            $actual[] = trim($heading->getText());
+        }
+        $script = "return Array.from(document.querySelectorAll('" . self::BLOCK . " [data-region=\"hub-editor-col\"]'))" .
+            ".map(function (c) { return Math.round(c.getBoundingClientRect().top); });";
+        $tops = $this->getSession()->evaluateScript($script);
+        if ($actual !== array_map('trim', explode(',', $headings))) {
+            throw new ExpectationException("The editor's columns are '" . implode(', ', $actual) . "'", $this->getSession());
+        }
+        if (count(array_unique($tops)) !== 1) {
+            $message = "The editor's columns are not side by side: tops " . implode(', ', $tops);
+            throw new ExpectationException($message, $this->getSession());
+        }
+    }
+
+    /**
+     * The department tree should scroll on its own.
+     *
+     * @Then /^the department tree should scroll on its own$/
+     */
+    public function tree_should_scroll(): void {
+        $ok = $this->getSession()->evaluateScript(
+            "return (function () { var t = document.querySelector('" . self::BLOCK . " [data-region=\"hub-editor\"] .hub-tree');" .
+            " var s = getComputedStyle(t); return (s.overflowY === 'auto' || s.overflowY === 'scroll') && " .
+            "t.getBoundingClientRect().bottom <= window.innerHeight; })();"
+        );
+        if (!$ok) {
+            throw new ExpectationException('The department tree does not scroll on its own', $this->getSession());
+        }
+    }
+
+    /**
+     * The view editor should be closed.
+     *
+     * @Then /^the view editor should be closed$/
+     */
+    public function editor_should_be_closed(): void {
+        $editor = $this->getSession()->getPage()->find('css', self::BLOCK . ' [data-region="hub-editor"]');
+        if ($editor && $editor->isVisible()) {
+            throw new ExpectationException('The view editor is open', $this->getSession());
+        }
+    }
+
+    /**
+     * I press Escape in the view editor.
+     *
+     * @When /^I press Escape in the view editor$/
+     */
+    public function i_press_escape_in_the_editor(): void {
+        $this->find('css', self::BLOCK . ' [data-region="hub-editor"]')->keyPress(27);
+        $this->getSession()->executeScript("document.querySelector('" . self::BLOCK . " [data-region=\"hub-editor\"]')" .
+            ".dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}))");
+        $this->wait_for_pending_js();
+    }
+
+    // Find (F1, F2).
+
+    /**
+     * I press the enter key in the hub "Find" box.
+     *
+     * @When /^I press the enter key in the hub "Find" box$/
+     */
+    public function i_press_enter_in_find(): void {
+        $this->getSession()->executeScript("document.querySelector('" . self::BLOCK . " [data-action=\"find\"]')" .
+            ".dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}))");
+        $this->wait_for_pending_js();
+    }
+
+    /**
+     * The hub "Find" box should be empty.
+     *
+     * @Then /^the hub "Find" box should be empty$/
+     */
+    public function find_should_be_empty(): void {
+        $value = $this->find('css', self::BLOCK . ' [data-action="find"]')->getValue();
+        if ($value !== '') {
+            throw new ExpectationException("The Find box holds '$value'", $this->getSession());
+        }
+    }
+
+    /**
+     * Every visible text, icon, bar segment and control outline in the hub meets My assessments' contrast
+     * targets: text APCA Lc 75 and WCAG 4.5:1; icons, bars, outlines and focus Lc 45 and 3:1 (CONTRAST.md).
+     *
+     * @Then /^the Hub dashboard block should meet its contrast targets$/
+     */
+    public function the_hub_should_meet_its_contrast_targets(): void {
+        $this->assert_contrast($this->contrast('all', self::BLOCK), 'At rest');
+    }
+
+    /**
+     * The same, with the pointer over each kind of control in turn: one of each button, link, select and item.
+     *
+     * @Then /^every kind of control in the Hub dashboard block should meet its contrast targets when hovered$/
+     */
+    public function every_hub_control_should_meet_its_contrast_targets_when_hovered(): void {
+        $failures = [];
+        $kinds = [];
+        $controls = ['.btn', 'a', 'button', 'select', '.dropdown-item', '.hub-chip'];
+        $selector = implode(', ', array_map(fn($control) => self::BLOCK . ' ' . $control, $controls));
+        foreach ($this->getSession()->getPage()->findAll('css', $selector) as $control) {
+            $classes = preg_replace('/\b(active|show|hub-row--open)\b/', '', (string) $control->getAttribute('class'));
+            $kind = $control->getTagName() . ' ' . trim($classes);
+            if (isset($kinds[$kind]) || !$control->isVisible()) {
+                continue;
+            }
+            $kinds[$kind] = true;
+            $id = 'hub-contrast-' . count($kinds);
+            $this->getSession()->executeScript('document.evaluate(' . json_encode($control->getXpath()) .
+                ', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue.setAttribute("data-contrast", "' .
+                $id . '")');
+            $control->mouseOver();
+            foreach ($this->contrast('all', '[data-contrast="' . $id . '"]') as $failure) {
+                $failures[] = "hovered $kind: $failure";
+            }
+        }
+        $this->getSession()->executeScript(
+            'document.querySelectorAll("[data-contrast]").forEach(e => e.removeAttribute("data-contrast"))'
+        );
+        $this->getSession()->getPage()->find('css', 'body')->mouseOver();
+        $this->assert_contrast($failures, 'Hovered');
+    }
+
+    /**
+     * Tabbing through the hub: every control's focus indicator reaches 3:1 and Lc 45 against what is behind it.
+     *
+     * @Then /^keyboard focus should be visible on every control in the Hub dashboard block$/
+     */
+    public function keyboard_focus_should_be_visible_on_every_hub_control(): void {
+        $inblock = 'return !!document.activeElement.closest(' . json_encode(self::BLOCK) . ')';
+        $this->getSession()->executeScript('document.activeElement.blur(); document.body.focus()');
+        for ($i = 0; $i < 100 && !$this->getSession()->evaluateScript($inblock); $i++) {
+            $this->press_tab();
+        }
+        $failures = [];
+        for ($stops = 0; $stops < 300 && $this->getSession()->evaluateScript($inblock); $stops++) {
+            $failures = array_merge($failures, $this->contrast('focus', self::BLOCK));
+            $this->press_tab();
+        }
+        if ($stops < 5) {
+            throw new ExpectationException("Tab reached only $stops controls in the hub", $this->getSession());
+        }
+        $this->assert_contrast($failures, 'Focused');
+    }
+
+    /**
+     * Presses Tab as a key action, so the browser moves focus and draws the focus-visible ring.
+     */
+    protected function press_tab(): void {
+        $tab = "\u{E004}";
+        $this->getSession()->getDriver()->getWebDriver()->executeCustomCommand('/session/:sessionId/actions', 'POST', [
+            'actions' => [['type' => 'key', 'id' => 'keyboard', 'actions' => [
+                ['type' => 'keyDown', 'value' => $tab],
+                ['type' => 'keyUp', 'value' => $tab],
+            ]]],
+        ]);
+        $this->wait_for_pending_js();
+    }
+
+    /**
+     * Runs My assessments' contrast checker (its tests/fixtures/contrast.js) in the page, then the hub's own check
+     * of each stacked-bar segment against its track, which that checker does not know.
+     *
+     * @param string $check "all", "focus" or one of the checks contrast.js lists
+     * @param string $selector What to check
+     * @return string[] One line per failure
+     */
+    protected function contrast(string $check, string $selector): array {
+        $js = file_get_contents(__DIR__ . '/../../../le_dashboard/tests/fixtures/contrast.js');
+        $js = trim(preg_replace('~^\s*//.*$~m', '', $js));
+        $failures = $this->getSession()->evaluateScript(
+            'return (' . $js . ')(' . json_encode($check) . ', ' . json_encode($selector) . ')'
+        );
+        if ($check !== 'all') {
+            return $failures;
+        }
+        $segments = <<<'JS'
+            return (selector => {
+                const out = [];
+                const cv = document.createElement('canvas').getContext('2d', {willReadFrequently: true});
+                const col = s => {
+                    cv.clearRect(0, 0, 1, 1);
+                    cv.fillStyle = s;
+                    cv.fillRect(0, 0, 1, 1);
+                    return cv.getImageData(0, 0, 1, 1).data;
+                };
+                const lin = v => (v /= 255) <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+                const lum = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+                const seen = new Set();
+                document.querySelectorAll(selector + ' .hub-stack-seg').forEach(seg => {
+                    const key = seg.className;
+                    if (seen.has(key) || seg.getBoundingClientRect().width < 2) {
+                        return;
+                    }
+                    seen.add(key);
+                    const fg = col(getComputedStyle(seg).backgroundColor);
+                    const bg = col(getComputedStyle(seg.parentElement).backgroundColor);
+                    const ratio = (Math.max(lum(fg), lum(bg)) + 0.05) / (Math.min(lum(fg), lum(bg)) + 0.05);
+                    if (ratio < 2.995) {
+                        out.push('bar ' + key + ': ' + ratio.toFixed(2) + ':1 against its track (needs 3:1)');
+                    }
+                });
+                return out;
+            })(arguments[0]);
+JS;
+        $segments = $this->getSession()->getDriver()->getWebDriver()->executeScript($segments, [$selector]);
+        return array_merge($failures, $segments ?: []);
+    }
+
+    /**
+     * Fails with every contrast failure, one per line.
+     *
+     * @param string[] $failures
+     * @param string $state
+     */
+    protected function assert_contrast(array $failures, string $state): void {
+        if ($failures) {
+            $failures = array_values(array_unique($failures));
+            throw new ExpectationException("$state, " . count($failures) . " parts of the hub miss their contrast targets:\n" .
+                implode("\n", $failures), $this->getSession());
+        }
     }
 }

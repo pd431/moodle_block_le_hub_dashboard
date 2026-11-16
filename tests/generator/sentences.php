@@ -355,4 +355,44 @@ class block_le_hub_dashboard_sentences {
         self::gen()->allocated(array_filter([$student, $second]), $name !== '' ? $name
             : block_le_hub_dashboard_generator::latest_allocating_assessment(), $marker);
     }
+
+    /**
+     * The administrator limited the hub to some categories (C1).
+     *
+     * @param string $paths Comma-separated "Faculty / Department" paths.
+     */
+    public static function valid_categories(string $paths): void {
+        self::gen()->valid_categories($paths);
+    }
+
+    /**
+     * A course category exists under another.
+     *
+     * @param string $name
+     * @param string $parent The parent's name.
+     */
+    public static function category_exists_under(string $name, string $parent): void {
+        self::gen()->category_exists_under($name, $parent);
+    }
+
+    /**
+     * An assessment in a course created in a category.
+     *
+     * @param string $tag
+     * @param string $modname
+     * @param string $name
+     * @param string $course The short name.
+     * @param string $category
+     * @param string $due
+     */
+    public static function assessment_in_category(
+        string $tag,
+        string $modname,
+        string $name,
+        string $course,
+        string $category,
+        string $due
+    ): void {
+        self::gen()->assessment_in_category($tag, $modname, $name, $course, $category, $due);
+    }
 }

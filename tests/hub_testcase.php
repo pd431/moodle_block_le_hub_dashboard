@@ -380,7 +380,7 @@ abstract class hub_testcase extends view_testcase {
             throw new failed("'$name' is not in '$group'" . ($where ? ' but in ' . self::text($where) : ''));
         }
         if ($reason !== '') {
-            $tag = $this->find(".//*[contains(@class, 'hub-reason')][1]", $row);
+            $tag = $this->find(".//*[contains(concat(' ', normalize-space(@class), ' '), ' hub-reason ')][1]", $row);
             if (!$tag || self::text($tag) !== $reason) {
                 throw new failed("'$name' leads with '" . ($tag ? self::text($tag) : '') . "', not '$reason'");
             }
@@ -404,7 +404,8 @@ abstract class hub_testcase extends view_testcase {
      * @param string $reason
      */
     protected function collapsed_row_should_show_reason_tag(string $name, string $reason): void {
-        foreach ($this->find_all(".//*[contains(@class, 'hub-reason')]", $this->row($name)) as $tag) {
+        $xpath = ".//*[contains(concat(' ', normalize-space(@class), ' '), ' hub-reason ')]";
+        foreach ($this->find_all($xpath, $this->row($name)) as $tag) {
             if (self::text($tag) === $reason) {
                 return;
             }
@@ -684,7 +685,7 @@ abstract class hub_testcase extends view_testcase {
         $header = $this->find(".//*[@data-region='hub-group-header']", $this->group($group));
         $parts = [self::text($this->find(".//*[contains(@class, 'hub-group-title')]", $header)) . ' ' .
             self::text($this->find(".//*[@data-region='hub-group-count']", $header))];
-        foreach ($this->find_all(".//button[@data-action='reason']", $header) as $button) {
+        foreach ($this->find_all(".//button[@data-action='reason'][not(@hidden)]", $header) as $button) {
             $parts[] = self::text($button);
         }
         $actual = implode(' · ', $parts);

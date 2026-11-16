@@ -33,6 +33,14 @@ $functions = [
         'loginrequired' => true,
         'readonlysession' => true,
     ],
+    'block_le_hub_dashboard_get_rows' => [
+        'classname' => '\\block_le_hub_dashboard\\external\\get_rows',
+        'description' => 'Render one batch of a view\'s rows.',
+        'type' => 'read',
+        'ajax' => true,
+        'loginrequired' => true,
+        'readonlysession' => true,
+    ],
     'block_le_hub_dashboard_refresh' => [
         'classname' => '\block_le_hub_dashboard\external\refresh',
         'description' => 'Re-index what the Hub dashboard shows, inline or queued, then render it again.',

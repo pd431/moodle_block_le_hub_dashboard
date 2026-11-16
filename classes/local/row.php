@@ -105,6 +105,10 @@ final class row {
         $row['status'] = $personstatus ?? self::status($cm, $class, $now);
         $row['progress'] = self::progress($cm, $class);
         $row['flags'] = self::flags($row, $cm, $notes);
+        $row['flagcount'] = count($row['flags']);
+        $row['hasflags'] = !empty($row['flags']);
+        $flagstring = $row['flagcount'] === 1 ? 'flags_one' : 'flags_many';
+        $row['flagslabel'] = get_string($flagstring, 'block_le_hub_dashboard', $row['flagcount']);
         $row['flagkeys'] = implode(' ', array_merge(
             array_column($row['flags'], 'key'),
             $cm->anonymous ? ['anonymous'] : [],
@@ -116,6 +120,8 @@ final class row {
         $row['people'] = self::people($cm, $viewerid, $convenors);
         $row['notes'] = self::notes($notes, $now);
         $row['hasnotes'] = !empty($notes);
+        $row['happened'] = self::happened($cm, $row['notes'], $now);
+        $row['hashappened'] = !empty($row['happened']);
         $row['ignore'] = $view ? self::ignore($view, $row) : null;
         $row['sortkey'] = rules::sort_key($cm, $class);
         $row['search'] .= ' ' . \core_text::strtolower($row['coursename']);
@@ -418,6 +424,43 @@ final class row {
             $dates[] = $date;
         }
         return $dates;
+    }
+
+    /**
+     * What has happened (R1): the deadlines, marking finished, release and the hub's notes, in date order, so the
+     * expanded row reads as a story. A deadline in the past with work still to do says so.
+     *
+     * @param \stdClass $cm
+     * @param array $notes As notes() returns.
+     * @param int $now
+     * @return array [time, iso, when, text, key]
+     */
+    protected static function happened(\stdClass $cm, array $notes, int $now): array {
+        $c = 'block_le_hub_dashboard';
+        $items = [];
+        $add = function (string $key, int $time, string $text) use (&$items) {
+            $items[] = ['key' => $key, 'time' => $time, 'iso' => date('c', $time), 'when' => format::datetime($time),
+                'text' => $text];
+        };
+        if ($cm->due) {
+            $add('due', (int)$cm->due, get_string('happened_due', $c));
+        }
+        if ($cm->markingdue) {
+            $missed = (int)$cm->markingdue < $now && (int)$cm->unmarked > 0;
+            $string = $missed ? 'happened_markingdue_missed' : 'happened_markingdue';
+            $add('markingdue', (int)$cm->markingdue, get_string($string, $c));
+        }
+        if ($cm->markingfinished) {
+            $add('markingfinished', (int)$cm->markingfinished, get_string('happened_markingfinished', $c));
+        }
+        if ($cm->timereleased) {
+            $add('released', (int)$cm->timereleased, get_string('happened_released', $c));
+        }
+        foreach ($notes as $n) {
+            $add('note', (int)$n['time'], get_string('happened_note', $c, ['author' => $n['author'], 'text' => $n['text']]));
+        }
+        usort($items, fn($a, $b) => $a['time'] <=> $b['time']);
+        return $items;
     }
 
     /**

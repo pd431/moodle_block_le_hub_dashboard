@@ -34,6 +34,9 @@ final class dashboard {
     /** The type filter's values; summative is the default (D2). */
     const TYPES = ['summative', 'formative', 'both'];
 
+    /** Views with more assessments than this load their rows in batches of this size, after the frame (L1, L2). */
+    const BATCH = 25;
+
     /** The Filter button's groups and items, in order (P3). Reason items come from rules::REASONS. */
     const FILTERS = [
         'work' => ['plagiarism', 'mitigation', 'exempt', 'returned'],
@@ -127,6 +130,32 @@ final class dashboard {
      *
      * @return array [sql or null when nothing is shown, params]
      */
+    /**
+     * Every assessment the state covers, in list order, with when each was indexed: the frame's list of what to
+     * fetch (L1) and the index's age.
+     *
+     * @return int[] cmid => timeindexed
+     */
+    public function cm_list(): array {
+        global $DB;
+        [$where, $params] = $this->where();
+        if ($where === null) {
+            return [];
+        }
+        return $DB->get_records_sql_menu("SELECT c.cmid, c.timeindexed
+                                            FROM {block_le_dashboard_cm} c
+                                            JOIN {course} co ON co.id = c.courseid
+                                            " . base::LIVE . "
+                                           WHERE $where
+                                        ORDER BY c.due ASC, c.name ASC, c.cmid ASC", $params);
+    }
+
+    /**
+     * The SQL that picks this dashboard's cms: the person's scope, or the view's courses in the year (late work in
+     * any year), as [where, params]; null when there is nothing to show.
+     *
+     * @return array|null
+     */
     protected function where(): ?array {
         if ($this->personid) {
             return people::scope_sql($this->personid);
@@ -142,19 +171,88 @@ final class dashboard {
     /**
      * The template context.
      *
+     * @param bool $deferred Leave the rows for the script to fetch, however small the view (L1).
+     * @param bool $witheditor Include the editor's context (the department tree) (L4).
      * @return array
      */
-    public function export(): array {
+    public function export(bool $deferred = false, bool $witheditor = true): array {
         $c = 'block_le_hub_dashboard';
+        $list = $this->cm_list();
+        $oldest = $list ? min(array_map('intval', $list)) : null;
+        // A small view comes with its rows; a large one, or the block's first paint, lists what to fetch (L1, L2).
+        $inline = !$deferred && count($list) <= self::BATCH;
+        $groups = $inline ? $this->groups(array_keys($list)) : array_fill_keys(rules::GROUPS, []);
+        $loading = !$inline && !empty($list);
+        $sections = [];
+        $strip = [];
+        foreach ($groups as $key => $rows) {
+            $sections[] = ['key' => $key, 'label' => get_string('group_' . $key, $c), 'count' => count($rows), 'rows' => $rows,
+                'hasrows' => !empty($rows) || $loading, 'reasons' => self::reason_counts($key, $rows),
+                'collapsed' => $key === rules::DONE, 'loading' => $loading];
+            $strip[] = ['key' => $key, 'label' => get_string('group_' . $key, $c), 'count' => count($rows),
+                'loading' => $loading];
+        }
+        $person = $this->personid ? \core_user::get_user($this->personid) : null;
+        $personname = $person ? fullname($person) : null;
+        return [
+            'uniqid' => \html_writer::random_id('hub'),
+            'state' => json_encode($this->state()),
+            'cmids' => $inline ? '' : implode(',', array_keys($list)),
+            'loading' => $loading,
+            'budget' => config::load_seconds(),
+            'budgettext' => get_string('budget_over', $c, count($list)),
+            'unheld' => testing::watching_rows(),
+            'selectclass' => format::select_class(),
+            'views' => $this->views(),
+            'hasviews' => (bool)views::all($this->userid),
+            'view' => $this->view ? ['id' => (int)$this->view->id, 'name' => format_string(
+                $this->view->name,
+                true,
+                ['escape' => false]
+            ),
+                'allocdays' => (int)$this->view->allocdays] : null,
+            'editor' => $witheditor && $this->view ? $this->editor() : null,
+            'person' => $person ? ['id' => (int)$person->id, 'name' => $personname,
+                'banner' => get_string('personscope', $c, $personname)] : null,
+            'years' => $this->years(),
+            'types' => array_map(
+                fn($t) => ['key' => $t, 'label' => get_string($t, $c), 'active' => $t === $this->type],
+                self::TYPES
+            ),
+            'type' => $this->type,
+            'filters' => $this->filters(),
+            'strip' => $strip,
+            'groups' => $sections,
+            'hasrows' => (bool)$list,
+            'empty' => $person ? get_string('empty_person', $c, $personname)
+                : ($this->view ? get_string('empty_view', $c) : get_string('noviews', $c)),
+            'freshness' => $this->freshness($oldest),
+            'timezone' => \core_date::get_user_timezone(),
+            'hoverpopovers' => maconfig::shown('hoverpopovers'),
+        ];
+    }
+
+    /**
+     * The rows of some of the state's assessments, built and sorted, by group (L2): what one batch fetch returns.
+     *
+     * @param int[] $cmids
+     * @return array[] group => rows, in list order
+     */
+    public function groups(array $cmids): array {
+        $cmids = array_values(array_unique(array_map('intval', $cmids)));
+        $groups = array_fill_keys(rules::GROUPS, []);
         [$where, $params] = $this->where();
-        $cms = $where === null ? [] : query::aggregates($where, $params, $this->now);
+        if ($where === null || !$cmids) {
+            return $groups;
+        }
+        global $DB;
+        [$insql, $inparams] = $DB->get_in_or_equal($cmids, SQL_PARAMS_NAMED, 'hb');
+        $cms = query::aggregates("($where) AND c.cmid $insql", $params + $inparams, $this->now);
         $riskdays = config::risk_days();
         $allocdays = $this->view ? (int)$this->view->allocdays : config::alloc_days();
         $notes = notes::for_cms(array_keys($cms));
         $convenors = people::convenors(array_column($cms, 'courseid'));
         $statuses = $this->personid ? people::statuses($this->personid, $cms, $this->now) : [];
-        $groups = array_fill_keys(rules::GROUPS, []);
-        $oldest = null;
         foreach ($cms as $cmid => $cm) {
             $class = rules::classify($cm, $this->now, $riskdays, $allocdays);
             $groups[$class->group][] = row::build(
@@ -167,61 +265,38 @@ final class dashboard {
                 $convenors[$cm->courseid] ?? [],
                 $statuses[$cmid] ?? null
             );
-            $oldest = $oldest === null ? (int)$cm->timeindexed : min($oldest, (int)$cm->timeindexed);
         }
-        $sections = [];
-        $strip = [];
-        foreach ($groups as $key => $rows) {
+        foreach ($groups as &$rows) {
             usort($rows, fn($a, $b) => ($a['sortkey'] <=> $b['sortkey']) ?: strcmp($a['search'], $b['search']));
-            $reasons = [];
-            foreach ($rows as $row) {
-                foreach ($row['reasons'] as $reason) {
-                    $reasons[$reason['key']] = ($reasons[$reason['key']] ?? 0) + 1;
-                }
-            }
-            $counts = [];
-            foreach (array_keys(rules::REASONS) as $reason) {
-                if (isset($reasons[$reason])) {
-                    $counts[] = ['key' => $reason, 'label' => get_string('reason_' . $reason, $c), 'count' => $reasons[$reason]];
-                }
-            }
-            $sections[] = ['key' => $key, 'label' => get_string('group_' . $key, $c), 'count' => count($rows), 'rows' => $rows,
-                'hasrows' => !empty($rows), 'reasons' => $counts, 'collapsed' => $key === rules::DONE];
-            $strip[] = ['key' => $key, 'label' => get_string('group_' . $key, $c), 'count' => count($rows)];
         }
-        $person = $this->personid ? \core_user::get_user($this->personid) : null;
-        $personname = $person ? fullname($person) : null;
-        return [
-            'uniqid' => \html_writer::random_id('hub'),
-            'state' => json_encode($this->state()),
-            'selectclass' => format::select_class(),
-            'views' => $this->views(),
-            'hasviews' => (bool)views::all($this->userid),
-            'view' => $this->view ? ['id' => (int)$this->view->id, 'name' => format_string(
-                $this->view->name,
-                true,
-                ['escape' => false]
-            ),
-                'allocdays' => (int)$this->view->allocdays] : null,
-            'editor' => $this->view ? $this->editor() : null,
-            'person' => $person ? ['id' => (int)$person->id, 'name' => $personname,
-                'banner' => get_string('personscope', $c, $personname)] : null,
-            'years' => $this->years(),
-            'types' => array_map(
-                fn($t) => ['key' => $t, 'label' => get_string($t, $c), 'active' => $t === $this->type],
-                self::TYPES
-            ),
-            'type' => $this->type,
-            'filters' => $this->filters(),
-            'strip' => $strip,
-            'groups' => $sections,
-            'hasrows' => (bool)$cms,
-            'empty' => $person ? get_string('empty_person', $c, $personname)
-                : ($this->view ? get_string('empty_view', $c) : get_string('noviews', $c)),
-            'freshness' => $this->freshness($oldest),
-            'timezone' => \core_date::get_user_timezone(),
-            'hoverpopovers' => maconfig::shown('hoverpopovers'),
-        ];
+        unset($rows);
+        return $groups;
+    }
+
+    /**
+     * A group's reasons with their counts, every reason the group can carry (P9): the page's script keeps the
+     * counts as rows arrive and filters change, and hides a reason with none.
+     *
+     * @param string $group
+     * @param array $rows
+     * @return array[] key, label, count
+     */
+    public static function reason_counts(string $group, array $rows): array {
+        $c = 'block_le_hub_dashboard';
+        $counts = [];
+        foreach ($rows as $row) {
+            foreach ($row['reasons'] as $reason) {
+                $counts[$reason['key']] = ($counts[$reason['key']] ?? 0) + 1;
+            }
+        }
+        $out = [];
+        foreach (rules::REASONS as $reason => $of) {
+            if ($of === $group) {
+                $out[] = ['key' => $reason, 'label' => get_string('reason_' . $reason, $c), 'count' => $counts[$reason] ?? 0,
+                    'none' => empty($counts[$reason])];
+            }
+        }
+        return $out;
     }
 
     /**
@@ -280,6 +355,12 @@ final class dashboard {
             $cat['checked'] = in_array($cat['id'], $view->cat);
         }
         unset($cat);
+        $picker = [
+            'id' => \html_writer::random_id('hubcats'),
+            'label' => get_string('editor_departments', 'block_le_hub_dashboard'),
+            'categories' => $categories,
+            'hascategories' => !empty($categories),
+        ];
         $codes = [];
         foreach (['starts', 'contains'] as $kind) {
             foreach ($view->$kind as $text) {
@@ -287,7 +368,10 @@ final class dashboard {
             }
         }
         $names = views::course_codes(array_merge($view->course, $view->outcourse));
-        $added = array_map(fn($id) => ['id' => (int)$id, 'code' => $names[$id] ?? (string)$id], $view->course);
+        $outside = self::outside_courses($view->course);
+        $added = array_map(fn($id) => ['id' => (int)$id, 'code' => $names[$id] ?? (string)$id,
+            'outside' => in_array((int)$id, $outside, true),
+            'outsidetext' => get_string('editor_outside', 'block_le_hub_dashboard', $names[$id] ?? (string)$id)], $view->course);
         $out = array_map(fn($id) => ['id' => (int)$id, 'code' => $names[$id] ?? (string)$id], $view->outcourse);
         $outcms = [];
         if ($view->outcm) {
@@ -310,11 +394,34 @@ final class dashboard {
             }
         }
         [$in, $total] = views::module_counts($view);
-        return ['categories' => $categories, 'codes' => $codes, 'hascodes' => !empty($codes), 'added' => $added,
+        return ['categories' => $categories, 'picker' => $picker, 'codes' => $codes, 'hascodes' => !empty($codes),
+            'added' => $added,
             'hasadded' => !empty($added),
             'outcourses' => $out, 'hasoutcourses' => !empty($out), 'outcms' => $outcms, 'hasoutcms' => !empty($outcms),
             'hasexceptions' => !empty($out) || !empty($outcms), 'allocdays' => (int)$view->allocdays,
             'modules' => get_string('modules_count', 'block_le_hub_dashboard', ['in' => $in, 'total' => $total])];
+    }
+
+    /**
+     * Which of some courses sit outside the categories the hub works in (C1): a view keeps a module it added by
+     * code, but its rows are not shown and the editor says so.
+     *
+     * @param int[] $courseids
+     * @return int[]
+     */
+    protected static function outside_courses(array $courseids): array {
+        global $DB;
+        if (!$courseids || categories::valid() === null) {
+            return [];
+        }
+        [$insql, $params] = $DB->get_in_or_equal(array_map('intval', $courseids), SQL_PARAMS_NAMED);
+        $out = [];
+        foreach ($DB->get_records_select_menu('course', "id $insql", $params, '', 'id, category') as $id => $category) {
+            if (!categories::inside((int)$category)) {
+                $out[] = (int)$id;
+            }
+        }
+        return $out;
     }
 
     /**

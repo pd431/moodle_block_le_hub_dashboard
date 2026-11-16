@@ -156,7 +156,7 @@ final class rows_test extends hub_testcase {
     public function test_a_collapsed_row_is_one_line_of_aligned_columns(): void {
         $this->background();
         $this->step('When I log in as "hub1" and view the "Hub dashboard"');
-        $this->step('Then the row columns should be "Assessment, Module, Reason, Status, Progress, Flags"');
+        $this->step('Then the row columns should be "Assessment, Module, Status, Progress, Flags"');
         $this->step('And the collapsed row "Problem sheet 4" should show "Problem sheet 4", "MTH2003"');
         $this->step('And the collapsed row "Problem sheet 4" should show the reason tag "Marking late"');
         $this->step('And the collapsed row "Problem sheet 4" should show the status "1 unmarked, 2 days past the marking ' .

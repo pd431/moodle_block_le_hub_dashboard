@@ -100,3 +100,27 @@ Feature: One control bar holds the view, year, type, Find and Filter
     Then the status strip should fit one line
     And the first assessment row should be within "700" pixels of the top of the block
     And the collapsed row "Problem sheet 4" should be at most "160" pixels tall
+
+  @javascript
+  Scenario: Two words in Find both have to match
+    Given the module "MTH1001-2627" in the category "Biosciences" has a summative "assign" "Problem sheet 1" due "3 days ago"
+    And the module "MTH1002-2526" in the category "Biosciences" has a summative "assign" "Problem sheet 2" due "3 days ago"
+    When I log in as "hub1" and view the "Hub dashboard"
+    And I type "MTH1 2627" in the hub "Find" box
+    Then there should be a hub row "Problem sheet 1"
+    And there should not be a hub row "Problem sheet 2"
+    And there should not be a hub row "Problem sheet 4"
+
+  @javascript
+  Scenario: Find narrows the list as I type, and Enter keeps the words as a chip
+    When I log in as "hub1" and view the "Hub dashboard"
+    And I type "sheet 5" in the hub "Find" box
+    Then there should be a hub row "Problem sheet 5"
+    And there should not be a hub row "Problem sheet 4"
+    When I press the enter key in the hub "Find" box
+    Then I should see the word chip "Only sheet 5" in the "Hub dashboard" block
+    And the hub "Find" box should be empty
+    When I type "-sheet" in the hub "Find" box
+    And I press the enter key in the hub "Find" box
+    Then I should see the word chip "Not sheet" in the "Hub dashboard" block
+    And there should not be a hub row "Problem sheet 5"

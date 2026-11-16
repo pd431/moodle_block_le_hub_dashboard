@@ -17,9 +17,10 @@
 {{!
     @template block_le_hub_dashboard/row
 
-    The inside of one hub row (P5, P6): the one-line columns, then the detail that opens under it. The list item
-    is in block_le_hub_dashboard/group, so this renders valid HTML alone. Flags and bars reuse My assessments'
-    templates.
+    The inside of one hub row (P5, P6, R1): the one-line columns (icon, name, module, the reason leading the
+    status, the stacked bar, one flag count that opens the flags), then the detail that opens under it. The list
+    item is in block_le_hub_dashboard/rows, so this renders valid HTML alone. Flags and bars reuse My
+    assessments' templates.
 
     Example context (json):
     {
@@ -31,7 +32,9 @@
         "status": "1 unmarked, 2 days past the marking deadline",
         "progress": {"segments": [{"key": "submitted", "label": "Submitted", "value": 2, "percent": 100}], "max": 2, "key": "marked",
             "text": "1 of 2 marked", "label": "Submitted 2, Marked 1, Released 0"},
-        "flags": [], "dates": [], "setup": [{"key": "online", "label": "Online submission"}], "bars": [],
+        "flags": [], "flagcount": 0, "hasflags": false, "flagslabel": "0 flags",
+        "dates": [], "setup": [{"key": "online", "label": "Online submission"}], "bars": [],
+        "happened": [{"key": "due", "iso": "2026-10-15T12:00:00+00:00", "when": "Thu 15 Oct 2026", "text": "Submission deadline"}], "hashappened": true,
         "people": {"convenors": [], "hasconvenors": false, "markers": [], "hasmarkers": false, "outstanding": null, "reallocateurl": null},
         "notes": [], "hasnotes": false,
         "ignore": {"viewid": 1, "viewname": "Science team", "label": "Ignore in Science team", "module": "This module, MTH2003",
@@ -55,10 +58,11 @@
     <div class="hub-col hub-col--module">
         <a class="ma-row-course hub-row-course" href="{{courseurl}}" title="{{coursename}}">{{course}}</a>
     </div>
-    <div class="hub-col hub-col--reason">
-        {{#reasons}}<span class="badge ma-pill hub-reason hub-reason--{{key}}" data-reason="{{key}}">{{label}}</span>{{/reasons}}
+    <div class="hub-col hub-col--status">
+        <span class="hub-reasons" data-region="hub-row-reasons">{{#reasons}}<span class="hub-reason hub-reason--{{key}}" data-reason="{{key}}">{{label}}</span>{{/reasons}}</span>
+        <span class="hub-status-sep" aria-hidden="true"> · </span>
+        <span class="hub-status-text" data-region="hub-row-status">{{status}}</span>
     </div>
-    <div class="hub-col hub-col--status" data-region="hub-row-status">{{status}}</div>
     <div class="hub-col hub-col--progress">
         {{#progress}}
         <div class="hub-stack" role="img" aria-label="{{label}}" data-region="hub-stack">
@@ -68,7 +72,15 @@
         {{/progress}}
     </div>
     <div class="hub-col hub-col--flags">
-        <div class="ma-flags hub-flags">{{#flags}}{{> block_le_dashboard/hint }}{{/flags}}</div>
+        {{#hasflags}}
+        <div class="hub-flagwrap" data-region="hub-flagwrap">
+            <button type="button" class="hub-flagcount" data-action="flags" aria-expanded="false" aria-controls="{{id}}-flags" data-region="hub-flagcount">{{flagslabel}}</button>
+            <div class="hub-flaglist" id="{{id}}-flags" data-region="hub-flaglist" role="group" aria-label="{{#str}}flags_list, block_le_hub_dashboard, {{name}}{{/str}}" hidden>
+                <div class="ma-flags hub-flags">{{#flags}}{{> block_le_dashboard/hint }}{{/flags}}</div>
+            </div>
+        </div>
+        {{/hasflags}}
+        {{^hasflags}}<span class="hub-flagcount hub-flagcount--none" aria-label="{{#str}}flags_none, block_le_hub_dashboard{{/str}}">&ndash;</span>{{/hasflags}}
     </div>
     <div class="hub-col hub-col--toggle">
         <button type="button" class="hub-row-toggle" data-action="toggle-row" aria-expanded="false" aria-controls="{{id}}-detail">
@@ -91,6 +103,15 @@
             <ul class="list-unstyled hub-setup" aria-label="{{#str}}setup, block_le_hub_dashboard{{/str}}">
                 {{#setup}}<li class="hub-setup-item" data-setup="{{key}}">{{label}}</li>{{/setup}}
             </ul>
+        </div>
+        <div class="hub-detail-block hub-detail-happened" data-region="hub-happened">
+            <h4 class="hub-detail-heading">{{#str}}happened, block_le_hub_dashboard{{/str}}</h4>
+            {{#hashappened}}
+            <ol class="list-unstyled hub-happened">
+                {{#happened}}<li class="hub-happened-item" data-key="{{key}}" data-time="{{time}}"><time datetime="{{iso}}" data-intext>{{when}}</time> <span class="hub-happened-text">{{text}}</span></li>{{/happened}}
+            </ol>
+            {{/hashappened}}
+            {{^hashappened}}<p class="text-muted">{{#str}}nothappened, block_le_hub_dashboard{{/str}}</p>{{/hashappened}}
         </div>
         <div class="hub-detail-block hub-detail-bars">
             {{#bars}}{{> block_le_dashboard/progress }}{{/bars}}

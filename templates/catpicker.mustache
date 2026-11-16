@@ -1,0 +1,52 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template block_le_hub_dashboard/catpicker
+
+    A category picker (C1, C2, C3): a search box over a tree of checkboxes, for the view editor and for the
+    administrator's "categories the hub works in" setting. catpicker.js gives it the tri-state ticks and the search.
+    With a field the checkboxes post as field[], and a hidden field makes an unticked tree save as empty (every
+    category); without one the editor reads the ticks itself.
+
+    Example context (json):
+    {
+        "id": "id_s_block_le_hub_dashboard_categories",
+        "field": "s_block_le_hub_dashboard_categories",
+        "label": "Categories the hub works in",
+        "categories": [
+            {"id": 2, "name": "Faculty of Science", "depth": 1, "parent": 0, "checked": true},
+            {"id": 3, "name": "Biosciences", "depth": 2, "parent": 2, "checked": false}
+        ],
+        "hascategories": true
+    }
+}}
+<div class="hub-catpicker" id="{{id}}" data-region="hub-catpicker">
+    {{#field}}<input type="hidden" name="{{field}}" value="">{{/field}}
+    {{#hascategories}}
+    <input type="search" class="form-control form-control-sm hub-catpicker-search" data-action="catpicker-search"
+           placeholder="{{#str}}catpicker_search, block_le_hub_dashboard{{/str}}" aria-label="{{#str}}catpicker_search, block_le_hub_dashboard{{/str}}" autocomplete="off">
+    <div class="hub-tree" role="group" aria-label="{{label}}">
+        {{#categories}}
+        <label class="hub-tree-item hub-tree-item--depth{{depth}}" data-region="hub-tree-item" data-id="{{id}}" data-parent="{{parent}}">
+            <input type="checkbox"{{#field}} name="{{field}}[]"{{/field}} value="{{id}}" data-action="pick-category"{{#checked}} checked{{/checked}}> <span class="hub-tree-name">{{name}}</span>
+        </label>
+        {{/categories}}
+        <p class="text-muted hub-catpicker-empty" data-region="hub-catpicker-empty" hidden>{{#str}}catpicker_none, block_le_hub_dashboard{{/str}}</p>
+    </div>
+    {{/hascategories}}
+    {{^hascategories}}<p class="text-muted">{{#str}}catpicker_nocategories, block_le_hub_dashboard{{/str}}</p>{{/hascategories}}
+</div>

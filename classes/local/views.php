@@ -187,6 +187,9 @@ final class views {
             $values = array_map('trim', array_map('strval', $rules[$kind] ?? []));
             if ($kind === 'course') {
                 $values = self::course_ids($values);
+            } else if ($kind === 'cat') {
+                // The minimal cover (C3): a ticked category stands for everything under it.
+                $values = array_map('strval', categories::cover(array_filter($values, 'is_numeric')));
             }
             foreach (array_unique(array_filter($values, 'strlen')) as $value) {
                 $DB->insert_record(self::RULES, (object)['viewid' => $id, 'kind' => $kind,
@@ -307,23 +310,31 @@ final class views {
         $ors = [];
         $params = [];
         $i = 0;
-        foreach ($view->cat as $catid) {
-            // The category and everything under it (D3).
-            $k = $p . 'c' . ++$i;
-            $ors[] = "co.category IN (SELECT cc.id FROM {course_categories} cc WHERE cc.id = :$k OR " .
-                $DB->sql_like('cc.path', ":{$k}p", false, false) . ')';
-            $params[$k] = (int)$catid;
-            $params[$k . 'p'] = '%/' . (int)$catid . '/%';
+        if ($view->cat) {
+            // The category and everything under it (D3): the ids are resolved from the cached tree, so the planner
+            // can use the index on course.category (L6).
+            [$insql, $inparams] = $DB->get_in_or_equal(
+                categories::with_descendants($view->cat),
+                SQL_PARAMS_NAMED,
+                $p . 'c'
+            );
+            $ors[] = "co.category $insql";
+            $params += $inparams;
         }
-        foreach ($view->starts as $text) {
-            $k = $p . 's' . ++$i;
-            $ors[] = $DB->sql_like('co.shortname', ":$k", false, false);
-            $params[$k] = $DB->sql_like_escape($text) . '%';
-        }
-        foreach ($view->contains as $text) {
-            $k = $p . 'n' . ++$i;
-            $ors[] = $DB->sql_like('co.shortname', ":$k", false, false);
-            $params[$k] = '%' . $DB->sql_like_escape($text) . '%';
+        // A code line's words all have to match (F1): "starts with" applies to the first word, the rest are held
+        // anywhere in the code; "contains" holds every word anywhere.
+        foreach (['starts', 'contains'] as $kind) {
+            foreach ($view->$kind as $text) {
+                $ands = [];
+                foreach (self::code_words($text) as $n => $word) {
+                    $k = $p . $kind[0] . ++$i;
+                    $ands[] = $DB->sql_like('co.shortname', ":$k", false, false);
+                    $params[$k] = ($kind === 'starts' && $n === 0 ? '' : '%') . $DB->sql_like_escape($word) . '%';
+                }
+                if ($ands) {
+                    $ors[] = '(' . implode(' AND ', $ands) . ')';
+                }
+            }
         }
         if ($view->course) {
             [$insql, $inparams] = $DB->get_in_or_equal($view->course, SQL_PARAMS_NAMED, $p . 'a');
@@ -334,6 +345,11 @@ final class views {
             return ['1 = 0', []];
         }
         $where = '(' . implode(' OR ', $ors) . ')';
+        // Every line stays inside the categories the hub works in (C1).
+        if ($limit = categories::limit_sql('co', $p . 'u')) {
+            $where .= ' AND ' . $limit[0];
+            $params += $limit[1];
+        }
         if ($view->outcourse) {
             [$insql, $inparams] = $DB->get_in_or_equal($view->outcourse, SQL_PARAMS_NAMED, $p . 'o', false);
             $where .= " AND co.id $insql";
@@ -343,7 +359,8 @@ final class views {
     }
 
     /**
-     * Whether a course is in a view, as in_view_sql() without the ignored assessments.
+     * Whether a course is in a view, as in_view_sql() without the ignored assessments: inside the hub's categories
+     * (C1), matched by a line, not taken out.
      *
      * @param \stdClass $view
      * @param \stdClass $course With id, shortname, category.
@@ -355,23 +372,40 @@ final class views {
             return false;
         }
         $ids = array_map('intval', array_filter(explode('/', $categorypath)));
+        if (!categories::inside((int)end($ids))) {
+            return false;
+        }
         foreach ($view->cat as $catid) {
             if (in_array((int)$catid, $ids)) {
                 return true;
             }
         }
         $code = \core_text::strtolower($course->shortname);
-        foreach ($view->starts as $text) {
-            if ($text !== '' && str_starts_with($code, \core_text::strtolower($text))) {
-                return true;
-            }
-        }
-        foreach ($view->contains as $text) {
-            if ($text !== '' && str_contains($code, \core_text::strtolower($text))) {
-                return true;
+        foreach (['starts', 'contains'] as $kind) {
+            foreach ($view->$kind as $text) {
+                $words = self::code_words($text);
+                $matches = (bool)$words;
+                foreach ($words as $n => $word) {
+                    $word = \core_text::strtolower($word);
+                    $first = $kind === 'starts' && $n === 0;
+                    $matches = $matches && ($first ? str_starts_with($code, $word) : str_contains($code, $word));
+                }
+                if ($matches) {
+                    return true;
+                }
             }
         }
         return in_array((int)$course->id, $view->course);
+    }
+
+    /**
+     * The words of a code line (F1): split on spaces, each one a part the code must hold.
+     *
+     * @param string $text
+     * @return string[]
+     */
+    public static function code_words(string $text): array {
+        return array_values(array_filter(preg_split('/\s+/', trim($text))));
     }
 
     /**
@@ -410,13 +444,7 @@ final class views {
      * @return array[] id, name, depth, parent
      */
     public static function categories(): array {
-        global $DB;
-        $out = [];
-        foreach ($DB->get_records('course_categories', null, 'sortorder ASC', 'id, name, parent, depth') as $cat) {
-            $out[] = ['id' => (int)$cat->id, 'name' => format_string($cat->name, true, ['escape' => false]),
-                'depth' => (int)$cat->depth, 'parent' => (int)$cat->parent];
-        }
-        return $out;
+        return categories::tree(true);
     }
 
     /**

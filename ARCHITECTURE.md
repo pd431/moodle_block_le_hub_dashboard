@@ -20,6 +20,7 @@ block_le_dashboard_cm / _stu / _mark        (My assessments' index; read only he
 classes/local/query        one aggregate per assessment: counts, send step, early, changed (SQL)
 classes/local/rules        group, reasons, order (pure PHP) + the unit rules in SQL and PHP twins
 classes/local/views        saved views: shape SQL, PHP twin, life cycle, exceptions
+classes/local/categories   the category tree, the hub's valid categories (C1), descendants, minimal cover (C3)
 classes/local/people       Find, a person's scope, convenors, markers
 classes/local/notes        hub notes
         │
@@ -27,10 +28,13 @@ classes/local/notes        hub notes
 classes/local/row          one row builder: status, progress, flags, dates, people, notes, Ignore menu
 classes/local/dashboard    what is shown, groups, strip, filters, editor
 classes/output/dashboard   the block's renderable
-classes/external/*         get_view, refresh, save_view, ignore, add_note, find (all through external/base)
+classes/external/*         get_view, get_rows, refresh, save_view, ignore, add_note, find (all through external/base)
+classes/local/testing      the one gate for test seams (slow rows), off unless PHPUnit or Behat is running
+classes/admin/setting_categories   the administrator's category picker (C1)
         │
         ▼
-templates/dashboard, view, group, row, editor      scss/styles.scss      amd/src/hub.js
+templates/dashboard, view, group, row, rows, editor, catpicker      scss/styles.scss
+amd/src/hub.js (the block: loading, filters, editor)   amd/src/catpicker.js (both category trees)
 ```
 
 ## Who owns what
@@ -46,9 +50,15 @@ templates/dashboard, view, group, row, editor      scss/styles.scss      amd/src
 | What a page shows: person or view, year, groups, strip, Filter list, editor | `local/dashboard.php` | `rules/*`, `external_test` |
 | Find, a person's scope and status, convenors, markers | `local/people.php` | `external_test::test_find`, `rules/rows_test` |
 | Hub notes (D11) | `local/notes.php`, `observer.php` | `external_test::test_add_note`, `privacy/provider_test` |
+| The category tree, which categories the hub works in, descendants and the minimal cover (C1, C3, L6) | `local/categories.php` | `views_test` (cover, id-list match, every line bounded) |
+| How a page loads: frame first, batches, budget (L1 to L4) | `local/dashboard.php` (`export`, `cm_list`), `external/get_rows.php`, `amd/src/hub.js` | `external_test`, `tests/behat/loading.feature` |
+| The category pickers' search and tri-state ticks (C2, C3) | `amd/src/catpicker.js`, `templates/catpicker.mustache` | `tests/behat/categories.feature` |
+| The administrator's category setting (C1) | `admin/setting_categories.php` | `tests/behat/categories.feature` |
+| Words AND each other (F1) | `local/views.php` (`code_words`, `courses_sql`, `course_in_view`), `amd/src/hub.js` (`holdsWords`) | `views_test` |
+| Test seams (slow rows) | `local/testing.php` | `tests/behat/loading.feature` |
 | Settings and preferences | `local/config.php` | |
 | Privacy | `privacy/provider.php` | `privacy/provider_test` |
-| Colours and contrast | `scss/styles.scss` maps on My assessments' `--ma-*` palette | CONTRAST.md |
+| Colours and contrast, both colour modes (DM1) | `scss/styles.scss` maps on My assessments' `--ma-*` palette | CONTRAST.md, `tests/behat/dark-mode.feature` |
 | Decision keys in comments | DECISIONS.md | `decisions_test` |
 
 Shared with My assessments and not restated here: dates, bars, hints and popovers (`block_le_dashboard\local\output
@@ -71,5 +81,6 @@ the index's freshness and refresh.
 1. Add it to `rules::REASONS` in group order, and to `classify()`.
 2. If it reads the index, add the count to `query::aggregates()`; if it is a per-unit rule, add the `is_*` method
    and its `*_SQL` twin side by side and extend `rules_test::test_sql_and_php_forms_agree`.
-3. Add `reason_<key>` to the language file and a tone in `$hub-reason-tones`.
+3. Add `reason_<key>` to the language file. Reasons carry no colour of their own since beta3 (R1): the group's
+   band does.
 4. Add a row to `rules_test::situations()` and to the group outline in `tests/behat/groups.feature`.

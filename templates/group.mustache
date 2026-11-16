@@ -18,7 +18,8 @@
     @template block_le_hub_dashboard/group
 
     One of the four groups (P9): a slim sticky header with the count and each reason's count as a toggle, then
-    the rows. Done starts collapsed. CSS hooks on .hub-group--{key}; JS hooks on data-group.
+    the rows. Done starts collapsed. Every reason the group can carry is rendered, hidden while its count is 0, so the
+    page's script can show it as rows arrive (L2). CSS hooks on .hub-group--{key}; JS hooks on data-group.
 
     Example context (json):
     {
@@ -27,7 +28,8 @@
         "count": 2,
         "hasrows": true,
         "collapsed": false,
-        "reasons": [{"key": "late", "label": "Marking late", "count": 2}],
+        "loading": false,
+        "reasons": [{"key": "late", "label": "Marking late", "count": 2, "none": false}],
         "rows": []
     }
 }}
@@ -37,23 +39,16 @@
                 aria-controls="hub-group-{{key}}-list">
             <i class="fa-solid fa-chevron-down hub-chevron" aria-hidden="true"></i>
             <span class="hub-group-title" id="hub-group-{{key}}-title">{{label}}</span>
-            <span class="badge hub-group-count" data-region="hub-group-count">{{count}}</span>
+            <span class="badge hub-group-count" data-region="hub-group-count">{{#loading}}…{{/loading}}{{^loading}}{{count}}{{/loading}}</span>
             <span class="accesshide">{{#str}}showgroup, block_le_hub_dashboard, {{label}}{{/str}}</span>
         </button>
         <div class="hub-group-reasons" data-region="hub-group-reasons">
             {{#reasons}}
-            <button type="button" class="hub-reason-toggle" data-action="reason" data-reason="{{key}}" aria-pressed="false">
+            <button type="button" class="hub-reason-toggle" data-action="reason" data-reason="{{key}}" aria-pressed="false"{{#none}} hidden{{/none}}>
                 {{label}} <span class="hub-reason-count" data-region="hub-reason-count">{{count}}</span>
             </button>
             {{/reasons}}
         </div>
     </div>
-    <ul class="list-unstyled hub-rows" id="hub-group-{{key}}-list" aria-labelledby="hub-group-{{key}}-title">
-        {{#rows}}
-        <li class="hub-row" id="{{id}}" data-region="hub-row" data-cmid="{{cmid}}" data-assesstype="{{assesstype}}" data-reasons="{{reasonkeys}}"
-            data-flags="{{flagkeys}}" data-search="{{search}}">
-            {{> block_le_hub_dashboard/row }}
-        </li>
-        {{/rows}}
-    </ul>
+    {{> block_le_hub_dashboard/rows }}
 </section>

@@ -33,6 +33,7 @@ import {setUserPreference} from 'core_user/repository';
 import Pending from 'core/pending';
 import {localise} from 'block_le_dashboard/localtime';
 import {Tips} from 'block_le_dashboard/tips';
+import {attach as attachPickers} from 'block_le_hub_dashboard/catpicker';
 
 const COMPONENT = 'block_le_hub_dashboard';
 
@@ -40,6 +41,11 @@ const SELECTORS = {
     view: '[data-region="hub-view"]',
     viewRoot: '[data-region="hub-view-root"]',
     loading: '[data-region="hub-loading"]',
+    progress: '[data-region="hub-progress"]',
+    progressText: '[data-region="hub-progress-text"]',
+    budget: '[data-region="hub-budget"]',
+    budgetText: '[data-region="hub-budget-text"]',
+    editorSlot: '[data-region="hub-editor-slot"]',
     status: '[data-region="hub-status"]',
     list: '[data-region="hub-list"]',
     group: '[data-region="hub-group"]',
@@ -63,11 +69,13 @@ const SELECTORS = {
 };
 
 /** How long Find waits after a keystroke before asking the server. */
-const FIND_DELAY = 250;
+const FIND_DELAY = 300;
 /** How long the editor waits after typing in a code rule before saving. */
 const SAVE_DELAY = 500;
 /** How long the toast stays. */
 const TOAST_TIME = 8000;
+/** How many assessments one row fetch asks for (L2). */
+const BATCH = 25;
 
 /**
  * Interactive things inside a row line; clicking them never toggles the row.
@@ -75,6 +83,15 @@ const TOAST_TIME = 8000;
  * @param {Element} target
  * @returns {boolean}
  */
+/**
+ * Whether a row's search text holds every word of some text (F1).
+ *
+ * @param {string} search
+ * @param {string} text
+ * @returns {boolean}
+ */
+const holdsWords = (search, text) => text.split(/\s+/).filter(Boolean).every(word => search.includes(word));
+
 const interactive = target => Boolean(target.closest('a, button, input, select, textarea, label, [data-action]'));
 
 /**
@@ -91,6 +108,7 @@ class Hub {
         this.type = state.type || 'summative';
         // Word filters, each {text, mode: 'only'|'not'} (P2); never saved (P8).
         this.words = [];
+        this.live = '';
         // Filter keys: "r:<reason>" or "f:<flag>" (P3).
         this.filters = new Set();
         this.expanded = new Set();
@@ -107,6 +125,11 @@ class Hub {
         // What a test runner waits for while a timer runs (core/pending), by timer.
         this.waiting = {};
         this.suggestIndex = -1;
+        // Rows still to fetch for the open view, and how far the fetch has got (L2).
+        this.queue = [];
+        this.total = 0;
+        this.fetched = 0;
+        this.loadingRows = false;
         root.addEventListener('click', e => this.click(e));
         // Opening an Ignore menu or the view menu again puts an unconfirmed item back. Captured, because
         // Bootstrap stops the toggle's click once its dropdown has opened.
@@ -127,7 +150,14 @@ class Hub {
         root.addEventListener('keydown', e => this.keydown(e));
         root.addEventListener('submit', e => this.submit(e));
         root.addEventListener('focusout', e => this.focusout(e));
+        root.addEventListener('hub-catpicker-change', () => {
+            clearTimeout(this.saveTimer);
+            this.settle('save');
+            this.saveShape();
+        });
+        attachPickers(root);
         this.tips = new Tips(root);
+        this.loadRows();
         this.apply();
         this.renderChips().catch(Notification.exception);
         localise(root).catch(Notification.exception);
@@ -191,6 +221,9 @@ class Hub {
      */
     click(e) {
         const target = e.target.closest('[data-action]');
+        if (!e.target.closest('[data-region="hub-flagwrap"]')) {
+            this.toggleFlags(null);
+        }
         if (!target || !this.root.contains(target)) {
             // A click on the row line itself (not on a link, flag or button) opens the row.
             const line = e.target.closest(SELECTORS.rowLine);
@@ -211,7 +244,9 @@ class Hub {
             'jump': () => this.jump(target.dataset.group),
             'reason': () => this.toggleFilter(`r:${target.dataset.reason}`),
             'toggle-row': () => this.toggleRow(target.closest(SELECTORS.row)),
+            'flags': () => this.toggleFlags(target),
             'refresh': () => this.load(`${COMPONENT}_refresh`, {}),
+            'retry-rows': () => this.retryRows(),
             'clear-person': () => this.load(`${COMPONENT}_get_view`, {personid: 0}),
             'chip-mode': () => this.setWordMode(parseInt(target.dataset.index, 10), target.dataset.mode),
             'chip-remove': () => this.removeChip(target.dataset.filter, target.dataset.index),
@@ -283,12 +318,22 @@ class Hub {
             clearTimeout(this.findTimer);
             this.settle('find');
             const text = e.target.value.trim();
-            if (text.length < 2) {
+            if (text === '') {
                 this.closeSuggest();
+                this.setLive('');
                 return;
             }
             this.wait('find');
-            this.findTimer = setTimeout(() => this.suggest(text).finally(() => this.settle('find')), FIND_DELAY);
+            // The list narrows as you type (F2), then the people who match are offered.
+            this.findTimer = setTimeout(() => {
+                this.setLive(text);
+                if (text.length < 2) {
+                    this.closeSuggest();
+                    this.settle('find');
+                    return;
+                }
+                this.suggest(text).finally(() => this.settle('find')).catch(Notification.exception);
+            }, FIND_DELAY);
         } else if (action === 'shape' && e.target.dataset.kind === 'codevalue') {
             clearTimeout(this.saveTimer);
             this.settle('save');
@@ -357,27 +402,13 @@ class Hub {
     keydown(e) {
         const target = e.target;
         if (target.matches(SELECTORS.find)) {
-            const items = this.suggestItems();
-            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                if (!items.length) {
-                    return;
-                }
-                e.preventDefault();
-                this.suggestIndex = e.key === 'ArrowDown'
-                    ? Math.min(items.length - 1, this.suggestIndex + 1) : Math.max(0, this.suggestIndex - 1);
-                this.markSuggest(items);
-            } else if (e.key === 'Enter') {
-                e.preventDefault();
-                const item = items[this.suggestIndex] || items[0];
-                if (item) {
-                    item.click();
-                } else if (target.value.trim()) {
-                    this.addWord(target.value.trim(), 'only');
-                }
-            } else if (e.key === 'Escape') {
-                this.closeSuggest();
-            }
-        } else if (e.key === 'Escape' && this.panelOpen && target.closest(SELECTORS.editor)) {
+            this.findKeydown(e, target);
+        } else if (e.key === 'Escape' && target.closest('[data-region="hub-flagwrap"]')) {
+            this.toggleFlags(null);
+            target.closest('[data-region="hub-flagwrap"]').querySelector('[data-action="flags"]').focus();
+        } else if (e.key === 'Escape' && this.panelOpen) {
+            // The editor is modal (E1): Escape closes it wherever the focus is.
+            e.preventDefault();
             this.closeEditor();
         } else if (e.key === 'Enter' && target.matches('[data-region="hub-addmodule"]')) {
             e.preventDefault();
@@ -385,6 +416,41 @@ class Hub {
         } else if (e.key === 'Enter' && target.matches('[data-action="view-name"], [data-kind="codevalue"]')) {
             e.preventDefault();
             target.blur();
+        }
+    }
+
+    /**
+     * Keys in the Find box: arrows walk the suggestions, Enter pins, Escape closes the list.
+     *
+     * @param {KeyboardEvent} e
+     * @param {HTMLInputElement} target
+     */
+    findKeydown(e, target) {
+        const items = this.suggestItems();
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            if (!items.length) {
+                return;
+            }
+            e.preventDefault();
+            this.suggestIndex = e.key === 'ArrowDown'
+                ? Math.min(items.length - 1, this.suggestIndex + 1) : Math.max(0, this.suggestIndex - 1);
+            this.markSuggest(items);
+        } else if (e.key === 'Enter') {
+            // Enter pins the words as a chip (F2), unless a suggestion was picked with the arrow keys. A
+            // leading "-" makes it an exclusion. The page's own combobox handling does not get the key.
+            e.preventDefault();
+            e.stopPropagation();
+            const item = this.suggestIndex >= 0 ? items[this.suggestIndex] : null;
+            const text = target.value.trim();
+            if (item) {
+                item.click();
+            } else if (text.startsWith('-') && text.length > 1) {
+                this.addWord(text.slice(1).trim(), 'not');
+            } else if (text) {
+                this.addWord(text, 'only');
+            }
+        } else if (e.key === 'Escape') {
+            this.closeSuggest();
         }
     }
 
@@ -454,6 +520,29 @@ class Hub {
             this.expanded.delete(cmid);
         }
         this.applyRow(row);
+    }
+
+    /**
+     * Opens or closes a row's flag list (R1); one list open at a time.
+     *
+     * @param {HTMLElement|null} button The count button, or null to close whatever is open.
+     */
+    toggleFlags(button) {
+        const open = button && button.getAttribute('aria-expanded') !== 'true';
+        this.root.querySelectorAll('[data-action="flags"][aria-expanded="true"]').forEach(other => {
+            other.setAttribute('aria-expanded', 'false');
+            const list = other.parentNode.querySelector('[data-region="hub-flaglist"]');
+            if (list) {
+                list.hidden = true;
+            }
+        });
+        if (open) {
+            button.setAttribute('aria-expanded', 'true');
+            const list = button.parentNode.querySelector('[data-region="hub-flaglist"]');
+            if (list) {
+                list.hidden = false;
+            }
+        }
     }
 
     /**
@@ -645,9 +734,23 @@ class Hub {
             box.value = '';
             box.focus();
         }
+        this.live = '';
         this.closeSuggest();
         this.renderChips().catch(Notification.exception);
         this.apply();
+    }
+
+    /**
+     * What is in the Find box narrows the list as it is typed (F2), before it is pinned as a chip.
+     *
+     * @param {string} text
+     */
+    setLive(text) {
+        const live = text.startsWith('-') ? '' : text.toLowerCase();
+        if (live !== this.live) {
+            this.live = live;
+            this.apply();
+        }
     }
 
     /**
@@ -687,6 +790,8 @@ class Hub {
      */
     pickPerson(personid) {
         this.closeSuggest();
+        // What was typed to find them is not a filter on their list.
+        this.live = '';
         this.load(`${COMPONENT}_get_view`, {personid}, '[data-action="clear-person"]');
     }
 
@@ -784,11 +889,15 @@ class Hub {
             return false;
         }
         const search = row.dataset.search || '';
+        // Space means AND (F1): every word of a chip, or of what is being typed, has to be in the row.
         for (const word of this.words) {
-            const has = search.includes(word.text);
+            const has = holdsWords(search, word.text);
             if (word.mode === 'only' ? !has : has) {
                 return false;
             }
+        }
+        if (this.live && !holdsWords(search, this.live)) {
+            return false;
         }
         const flags = (row.dataset.flags || '').split(' ');
         for (const key of this.filters) {
@@ -838,7 +947,7 @@ class Hub {
                 return text;
             }).catch(Notification.exception);
         }
-        const filtering = this.type !== 'both' || this.words.length > 0 || this.filters.size > 0;
+        const filtering = this.type !== 'both' || this.words.length > 0 || this.filters.size > 0 || this.live !== '';
         let anyMatch = false;
         view.querySelectorAll(SELECTORS.group).forEach(group => {
             const key = group.dataset.group;
@@ -858,15 +967,17 @@ class Hub {
                 this.applyRow(row);
             });
             anyMatch = anyMatch || matches > 0;
-            group.hidden = matches === 0;
+            group.hidden = matches === 0 && !this.loadingRows;
             group.classList.toggle('hub-group--collapsed', collapsed);
             const toggle = group.querySelector('[data-action="toggle-group"]');
             if (toggle) {
                 toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
             }
+            // While rows are still arriving a count is not known yet (L1).
+            const shown = this.loadingRows && matches === 0 ? '\u2026' : String(matches);
             const count = group.querySelector('[data-region="hub-group-count"]');
             if (count) {
-                count.textContent = matches;
+                count.textContent = shown;
             }
             group.querySelectorAll('[data-action="reason"]').forEach(button => {
                 const n = reasons[button.dataset.reason] || 0;
@@ -876,12 +987,12 @@ class Hub {
             });
             const pill = view.querySelector(`[data-action="jump"][data-group="${key}"] [data-region="hub-strip-count"]`);
             if (pill) {
-                pill.textContent = matches;
+                pill.textContent = shown;
             }
         });
         const empty = view.querySelector(SELECTORS.filterEmpty);
         if (empty) {
-            empty.hidden = !filtering || anyMatch;
+            empty.hidden = !filtering || anyMatch || this.loadingRows;
         }
     }
 
@@ -994,11 +1105,17 @@ class Hub {
      * @param {boolean} select Whether to select that control's text.
      */
     openEditor(focus = null, select = false) {
-        const panel = this.root.querySelector(SELECTORS.editor);
-        const scrim = this.root.querySelector(SELECTORS.scrim);
-        if (!panel) {
+        if (!this.root.querySelector(SELECTORS.editor)) {
+            this.ensureEditor().then(ok => {
+                if (ok) {
+                    this.openEditor(focus, select);
+                }
+                return ok;
+            }).catch(Notification.exception);
             return;
         }
+        const panel = this.root.querySelector(SELECTORS.editor);
+        const scrim = this.root.querySelector(SELECTORS.scrim);
         this.panelOpen = true;
         panel.hidden = false;
         if (scrim) {
@@ -1051,7 +1168,8 @@ class Hub {
     rules() {
         const panel = this.root.querySelector(SELECTORS.editor);
         const rules = {cat: [], starts: [], contains: [], course: []};
-        panel.querySelectorAll('[data-kind="cat"]:checked').forEach(check => rules.cat.push(check.value));
+        // Every ticked category; the server keeps the minimal cover (C3).
+        panel.querySelectorAll('[data-action="pick-category"]:checked').forEach(check => rules.cat.push(check.value));
         panel.querySelectorAll('[data-region="hub-code-line"]').forEach(line => {
             const kind = line.querySelector('[data-kind="codekind"]');
             const value = line.querySelector('[data-kind="codevalue"]');
@@ -1072,8 +1190,8 @@ class Hub {
         const focused = document.activeElement;
         let focus = null;
         if (focused && focused.closest(SELECTORS.editor)) {
-            if (focused.dataset.kind === 'cat') {
-                focus = `[data-kind="cat"][value="${focused.value}"]`;
+            if (focused.dataset.action === 'pick-category') {
+                focus = `[data-action="pick-category"][value="${focused.value}"]`;
             } else if (focused.dataset.kind === 'codevalue' || focused.dataset.kind === 'codekind') {
                 const lines = Array.from(this.root.querySelectorAll('[data-region="hub-code-line"]'));
                 const i = lines.indexOf(focused.closest('[data-region="hub-code-line"]'));
@@ -1159,14 +1277,15 @@ class Hub {
         const seq = ++this.seq;
         this.refreshing = this.refreshing || isrefresh;
         const state = this.readState();
-        const call = {viewid: state.viewid, yearid: state.yearid, type: this.type, personid: state.personid, ...args};
+        const call = {viewid: state.viewid, yearid: state.yearid, type: this.type, personid: state.personid,
+            witheditor: this.panelOpen, ...args};
         const kept = this.keep(focus);
         this.busy(true);
         try {
             const [result] = Ajax.call([{methodname, args: call}]);
             const response = await result;
             if (seq === this.seq) {
-                this.show(response.html, kept);
+                this.show(response.html, kept, response.editor || '');
                 this.say(await getString(isrefresh ? 'statusrefreshed' : 'statusloaded', COMPONENT));
             }
         } catch (error) {
@@ -1223,11 +1342,13 @@ class Hub {
      *
      * @param {string} html
      * @param {Object} kept From keep().
+     * @param {string} editor The rendered editor, when the reply carried it (L4).
      */
-    show(html, kept) {
+    show(html, kept, editor = '') {
         const container = this.root.querySelector(SELECTORS.view);
         container.innerHTML = html;
         this.readState();
+        this.placeEditor(editor);
         if (this.type !== this.state.type) {
             this.type = this.state.type;
         }
@@ -1238,6 +1359,195 @@ class Hub {
         this.renderChips().catch(Notification.exception);
         localise(this.root).catch(Notification.exception);
         this.restore(kept);
+        this.loadRows();
+    }
+
+    // --- Rows in batches (L2, L3) ----------------------------------------------------------------------
+
+    /**
+     * Starts fetching the rows the frame lists, a batch at a time.
+     */
+    loadRows() {
+        const view = this.viewRoot;
+        const ids = view ? (view.dataset.cmids || '').split(',').filter(Boolean).map(Number) : [];
+        this.queue = ids;
+        this.total = ids.length;
+        this.fetched = 0;
+        this.loadingRows = ids.length > 0;
+        this.showBudget(false);
+        this.progress();
+        if (this.loadingRows) {
+            this.fetchRows().catch(Notification.exception);
+        }
+    }
+
+    /**
+     * Fetches the queued rows, batch by batch, until the queue is empty or a batch runs past the budget (L3).
+     */
+    async fetchRows() {
+        const seq = this.seq;
+        // A test that slows the rows down watches the frame fill in, so it must not be held until they land.
+        const held = !(this.viewRoot && this.viewRoot.dataset.unheld);
+        const pending = held ? new Pending(`${COMPONENT}/rows`) : null;
+        try {
+            while (this.queue.length) {
+                const batch = this.queue.slice(0, BATCH);
+                const state = this.readState();
+                const [result] = Ajax.call([{methodname: `${COMPONENT}_get_rows`, args: {cmids: batch, viewid: state.viewid,
+                    yearid: state.yearid, type: this.type, personid: state.personid}}]);
+                const reply = await this.withinBudget(result);
+                if (seq !== this.seq) {
+                    // A newer view took over.
+                    return;
+                }
+                if (reply === null) {
+                    this.showBudget(true);
+                    return;
+                }
+                this.queue = this.queue.slice(batch.length);
+                this.fetched += batch.length;
+                this.insertRows(reply.html);
+                this.progress();
+            }
+            this.loadingRows = false;
+            this.progress();
+            this.apply();
+            this.say(await getString('statusloaded', COMPONENT));
+        } catch (error) {
+            this.loadingRows = false;
+            this.progress();
+            this.apply();
+            Notification.exception(error);
+        } finally {
+            if (pending) {
+                pending.resolve();
+            }
+        }
+    }
+
+    /**
+     * Resolves with the reply, or with null once the budget has run out first.
+     *
+     * @param {Promise} promise
+     * @returns {Promise<Object|null>}
+     */
+    withinBudget(promise) {
+        const view = this.viewRoot;
+        const seconds = Math.max(1, parseInt(view && view.dataset.budget, 10) || 20);
+        let timer = null;
+        const out = new Promise(resolve => {
+            timer = setTimeout(() => resolve(null), seconds * 1000);
+        });
+        return Promise.race([promise, out]).finally(() => clearTimeout(timer));
+    }
+
+    /**
+     * Retry after the budget ran out: carries on from the batch that was waiting.
+     */
+    retryRows() {
+        this.showBudget(false);
+        if (this.queue.length) {
+            this.fetchRows().catch(Notification.exception);
+        }
+    }
+
+    /**
+     * Shows or hides the "still loading" message with its Retry.
+     *
+     * @param {boolean} on
+     */
+    showBudget(on) {
+        const box = this.root.querySelector(SELECTORS.budget);
+        if (!box) {
+            return;
+        }
+        box.hidden = !on;
+        if (on) {
+            // The sentence came with the frame: a server that is slow would be slow to send it too.
+            this.say(box.querySelector(SELECTORS.budgetText).textContent.trim());
+        }
+    }
+
+    /**
+     * The "Loading n of m" line, shown while rows are on their way.
+     */
+    progress() {
+        const line = this.root.querySelector(SELECTORS.progress);
+        if (!line) {
+            return;
+        }
+        line.hidden = !this.loadingRows;
+        if (this.loadingRows && this.fetched > 0) {
+            getString('loading_rows', COMPONENT, {done: this.fetched, total: this.total}).then(text => {
+                line.querySelector(SELECTORS.progressText).textContent = text;
+                return text;
+            }).catch(Notification.exception);
+        }
+    }
+
+    /**
+     * Puts fetched rows into their groups, each in its place by sort key.
+     *
+     * @param {string} html A list from the rows template.
+     */
+    insertRows(html) {
+        const holder = document.createElement('template');
+        holder.innerHTML = html;
+        Array.from(holder.content.querySelectorAll(SELECTORS.row)).forEach(row => {
+            const list = this.root.querySelector(`#hub-group-${row.dataset.group}-list`);
+            if (!list) {
+                return;
+            }
+            const key = parseInt(row.dataset.sortkey, 10) || 0;
+            const search = row.dataset.search || '';
+            let before = null;
+            for (const other of list.children) {
+                const otherKey = parseInt(other.dataset.sortkey, 10) || 0;
+                if (otherKey > key || (otherKey === key && (other.dataset.search || '') > search)) {
+                    before = other;
+                    break;
+                }
+            }
+            list.insertBefore(row, before);
+        });
+        this.apply();
+        localise(this.root).catch(Notification.exception);
+    }
+
+    /**
+     * Puts a rendered editor in its slot (L4), or leaves the slot as the frame had it.
+     *
+     * @param {string} editor
+     */
+    placeEditor(editor) {
+        const slot = this.root.querySelector(SELECTORS.editorSlot);
+        if (slot && editor) {
+            slot.innerHTML = editor;
+            attachPickers(slot);
+        }
+    }
+
+    /**
+     * Fetches the editor for the open view when the frame came without it (L4).
+     *
+     * @returns {Promise<boolean>} Whether there is an editor to open.
+     */
+    async ensureEditor() {
+        if (this.root.querySelector(SELECTORS.editor)) {
+            return true;
+        }
+        const pending = new Pending(`${COMPONENT}/editor`);
+        try {
+            const state = this.readState();
+            const [result] = Ajax.call([{methodname: `${COMPONENT}_get_view`, args: {viewid: state.viewid, yearid: state.yearid,
+                type: this.type, personid: state.personid, witheditor: true}}]);
+            const reply = await result;
+            this.placeEditor(reply.editor || '');
+            localise(this.root).catch(Notification.exception);
+        } finally {
+            pending.resolve();
+        }
+        return Boolean(this.root.querySelector(SELECTORS.editor));
     }
 
     /**

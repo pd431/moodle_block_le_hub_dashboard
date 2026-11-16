@@ -61,6 +61,7 @@ class save_view extends base {
      * @param int $yearid
      * @param string $type
      * @param int $personid
+     * @param bool $witheditor
      * @return array
      */
     public static function execute(
@@ -71,10 +72,12 @@ class save_view extends base {
         int $allocdays = -1,
         int $yearid = -1,
         string $type = '',
-        int $personid = 0
+        int $personid = 0,
+        bool $witheditor = false
     ): array {
         $p = self::validate_parameters(self::execute_parameters(), ['action' => $action, 'viewid' => $viewid, 'name' => $name,
-            'rules' => $rules, 'allocdays' => $allocdays, 'yearid' => $yearid, 'type' => $type, 'personid' => $personid]);
+            'rules' => $rules, 'allocdays' => $allocdays, 'yearid' => $yearid, 'type' => $type, 'personid' => $personid,
+            'witheditor' => $witheditor]);
         $userid = self::user();
         $open = (int)$p['viewid'];
         switch ($p['action']) {
@@ -111,7 +114,7 @@ class save_view extends base {
             unset_user_preference('block_le_hub_dashboard_view', $userid);
         }
         return self::render(self::dashboard($userid, ['viewid' => $open, 'yearid' => $p['yearid'], 'type' => $p['type'],
-            'personid' => 0]));
+            'personid' => 0]), (bool)$p['witheditor']);
     }
 
     /**

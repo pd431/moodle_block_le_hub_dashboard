@@ -17,6 +17,7 @@
 namespace block_le_hub_dashboard;
 
 use block_le_hub_dashboard\local\config;
+use block_le_hub_dashboard\local\categories;
 use block_le_hub_dashboard\local\views;
 
 /**
@@ -27,6 +28,7 @@ use block_le_hub_dashboard\local\views;
  * @copyright  2026 Pierre Camaly de Brosses - University of Exeter
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \block_le_hub_dashboard\local\views
+ * @covers     \block_le_hub_dashboard\local\categories
  */
 final class views_test extends \advanced_testcase {
     /** @var \stdClass[] Courses by short name. */
@@ -127,6 +129,93 @@ final class views_test extends \advanced_testcase {
     }
 
     /**
+     * The category match is an IN on course.category, resolved from the cached tree, not a LIKE on the path (L6):
+     * a parent takes everything under it, a category the site lost matches nothing, and the tree is read once.
+     */
+    public function test_category_match_is_an_id_list(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->fixtures();
+        $u = (int)$this->getDataGenerator()->create_user()->id;
+        $view = $this->view($u, ['cat' => [$this->cats['Science']->id]]);
+        [$sql, $params] = views::in_view_sql($view);
+        $this->assertStringNotContainsStringIgnoringCase('like', $sql);
+        $this->assertStringContainsString('co.category IN', $sql);
+        $this->assertEqualsCanonicalizing(
+            [(int)$this->cats['Science']->id, (int)$this->cats['Biology']->id],
+            categories::with_descendants([$this->cats['Science']->id])
+        );
+        $this->assertSame(['BIO1', 'PHY1'], $this->sql_picks($view));
+        $this->assertSame($this->php_picks($view), $this->sql_picks($view));
+
+        $gone = $this->view($u, ['cat' => [999999]]);
+        $this->assertSame([], $this->sql_picks($gone));
+
+        $reads = $DB->perf_get_reads();
+        categories::with_descendants([$this->cats['Arts']->id]);
+        categories::tree();
+        $this->assertSame($reads, $DB->perf_get_reads());
+    }
+
+    /**
+     * The categories the hub works in (C1) bound every line: a department rule, a code rule, a module added by code
+     * and a person's scope stay inside them; the SQL and PHP forms agree; nothing set means every category.
+     */
+    public function test_valid_categories_bound_every_line(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->fixtures();
+        $u = (int)$this->getDataGenerator()->create_user()->id;
+        $everything = $this->view($u, ['cat' => [$this->cats['Science']->id, $this->cats['Arts']->id],
+            'contains' => ['1'], 'course' => $this->ids('HIS1')]);
+        $this->assertSame(['BIO1', 'PHY1', 'HIS1', 'MTH1001', 'MTH2003', 'ARTBIO'], $this->sql_picks($everything));
+
+        set_config('categories', $this->cats['Science']->id, 'block_le_hub_dashboard');
+        categories::reset();
+        $this->assertSame(['BIO1', 'PHY1'], $this->sql_picks($everything));
+        $this->assertSame($this->php_picks($everything), $this->sql_picks($everything));
+        $this->assertSame([], $this->sql_picks($this->view($u, ['course' => $this->ids('HIS1')])));
+        $this->assertSame([], $this->sql_picks($this->view($u, ['starts' => ['HIS']])));
+        $this->assertSame(['BIO1'], $this->sql_picks($this->view($u, ['cat' => [$this->cats['Biology']->id]])));
+        // The pickers offer the valid categories and what is under them only.
+        $this->assertSame(['Science', 'Biology'], array_column(views::categories(), 'name'));
+        $this->assertContains('Arts', array_column(categories::tree(false), 'name'));
+
+        $marker = (int)$this->getDataGenerator()->create_user()->id;
+        foreach (['HIS1', 'BIO1'] as $code) {
+            $DB->insert_record('block_le_dashboard_mark', (object)['cmid' => $this->cms[(int)$this->courses[$code]->id],
+                'unitid' => 1, 'unittype' => 'user', 'stage' => 1, 'allocatedto' => $marker, 'submitted' => 0, 'marked' => 0,
+                'released' => 0, 'flagged' => 0, 'counted' => 1]);
+        }
+        [$sql, $params] = \block_le_hub_dashboard\local\people::scope_sql($marker);
+        $scoped = $DB->get_fieldset_sql("SELECT c.courseid FROM {block_le_dashboard_cm} c WHERE $sql", $params);
+        $this->assertSame([(int)$this->courses['BIO1']->id], array_map('intval', $scoped));
+    }
+
+    /**
+     * A view saves the minimal cover of what was ticked (C3): a ticked faculty with all its departments saves the
+     * faculty alone, a partly ticked faculty saves its ticked departments, and the match is the same either way.
+     */
+    public function test_departments_save_as_the_minimal_cover(): void {
+        $this->resetAfterTest();
+        $this->fixtures();
+        $u = (int)$this->getDataGenerator()->create_user()->id;
+        $science = (int)$this->cats['Science']->id;
+        $biology = (int)$this->cats['Biology']->id;
+        $this->assertSame([$science], categories::cover([$biology, $science]));
+        $this->assertSame([$biology], categories::cover([$biology]));
+        $history = (int)$this->cats['History']->id;
+        $this->assertSame([$science, $history], categories::cover([$science, $biology, $history]));
+
+        $view = $this->view($u, ['cat' => [$science, $biology]]);
+        $this->assertSame([$science], $view->cat);
+        $this->assertSame(['BIO1', 'PHY1'], $this->sql_picks($view));
+        $partial = $this->view($u, ['cat' => [$biology]]);
+        $this->assertSame([$biology], $partial->cat);
+        $this->assertSame(['BIO1'], $this->sql_picks($partial));
+    }
+
+    /**
      * The SQL and PHP forms agree, and each kind of line does what it says.
      */
     public function test_in_view_sql_and_cm_in_view_agree(): void {
@@ -139,6 +228,10 @@ final class views_test extends \advanced_testcase {
             'a sub-department alone' => [['cat' => [$this->cats['Biology']->id]], [], ['BIO1']],
             'codes starting with' => [['starts' => ['mth']], [], ['MTH1001', 'MTH2003']],
             'codes containing' => [['contains' => ['BIO']], [], ['BIO1', 'ARTBIO']],
+            'two words both match, starting with the first' => [['starts' => ['mth 2003']], [], ['MTH2003']],
+            'two words both match anywhere' => [['contains' => ['bio 1']], [], ['BIO1']],
+            'two words in any order' => [['contains' => ['1 mth']], [], ['MTH1001']],
+            'a blank line matches nothing' => [['contains' => ['   ']], [], []],
             'a module added by id' => [['course' => $this->ids('HIS1')], [], ['HIS1']],
             'a module added by code' => [['course' => ['his1']], [], ['HIS1']],
             'lines add up' => [['cat' => [$this->cats['History']->id], 'starts' => ['MTH2'], 'course' => $this->ids('PHY1')], [],

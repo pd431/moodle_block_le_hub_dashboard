@@ -31,19 +31,6 @@ $hub-group-tones: (
     "done": "grey",
 );
 
-$hub-reason-tones: (
-    "release": "attention",
-    "allocate": "attention",
-    "late": "primary",
-    "risk": "primary",
-    "notsent": "primary",
-    "early": "primary",
-    "changedsent": "primary",
-    "upcoming": "info",
-    "ontrack": "info",
-    "released": "grey",
-    "changedrel": "grey",
-);
 
 .block_le_dashboard_dashboard.le-hub {
     // The theme's body size, not My assessments' small text.
@@ -51,8 +38,36 @@ $hub-reason-tones: (
 
     // Row columns (P5): icon, Assessment, Module, Reason, Status, Progress, Flags, chevron. One rule, so the
     // column header and every row line up.
-    --hub-columns: 2rem minmax(9rem, 1.5fr) 5.5rem minmax(7rem, 9rem) minmax(10rem, 1.5fr) 9rem minmax(5rem, auto) 2rem;
-    --hub-areas: "icon name module reason status progress flags toggle";
+    // One fixed track list for the header and every row (A1): only the name flexes.
+    --hub-columns: 2rem minmax(8rem, 1fr) 6.5rem 20rem 9rem 4.5rem 2rem;
+    --hub-areas: "icon name module status progress flags toggle";
+
+    // A hovered or open row: a quarter of the grey fill over the surface, the most tint that keeps muted text
+    // and links at APCA Lc 75 on it (CONTRAST.md). Browsers without color-mix() get no tint; the chevron still
+    // shows on hover.
+    --hub-row-tint: color-mix(in srgb, var(--ma-grey-fill) 25%, var(--ma-surface));
+
+    @supports not (color: color-mix(in srgb, red, blue)) {
+        --hub-row-tint: var(--ma-surface);
+    }
+
+    // Moodle 5.3's dark colour mode (DM1): My assessments re-points every --ma-* token under
+    // [data-bs-theme="dark"], and the hub takes its colours from those tokens, so only the hub's own choices
+    // change here: bar segments move from the solid tones (made for a white track) to the bar step that My
+    // assessments checked on its dark track.
+    @at-root [data-bs-theme="dark"] & {
+        @each $segment, $tone in $hub-segments {
+            .hub-legend-item--#{$segment},
+            .hub-stack-seg--#{$segment} {
+                --hub-seg: var(--ma-#{$tone}-bar);
+            }
+        }
+
+        .hub-legend-item--sent,
+        .hub-stack-seg--sent {
+            --hub-seg: var(--ma-attention-bar);
+        }
+    }
 
     .hub-controls {
         display: flex;
@@ -71,6 +86,41 @@ $hub-reason-tones: (
         flex: 1 1 14rem;
         min-width: 12rem;
         max-width: 26rem;
+
+        // As My assessments' search box: the focus ring round the whole group, in the block's ring colour, which
+        // reaches Lc 45 in both colour modes where Bootstrap's own does not (DM1).
+        .input-group {
+            border-radius: 0.3rem;
+
+            &:focus-within {
+                box-shadow: var(--ma-focus-ring);
+            }
+        }
+
+        .input-group-text,
+        .form-control {
+            border-color: var(--ma-control-line);
+            background-color: var(--ma-surface);
+            color: var(--ma-text);
+            box-shadow: none;
+        }
+    }
+
+    // Bootstrap's muted grey misses Lc 75 on Boost's dark card: the block's own muted colour instead, which My
+    // assessments checked in both modes. !important because Bootstrap's own rule carries it.
+    .text-muted {
+        color: var(--ma-text-muted) !important;
+    }
+
+    // The editor's inputs: the block's focus ring and lines, in both modes.
+    .hub-panel .form-control {
+        border-color: var(--ma-control-line);
+        background-color: var(--ma-surface);
+        color: var(--ma-text);
+
+        &:focus {
+            box-shadow: var(--ma-focus-ring);
+        }
     }
 
     .hub-spacer {
@@ -216,7 +266,7 @@ $hub-reason-tones: (
         &[aria-pressed="true"] {
             background-color: var(--ma-primary-ink);
             border-color: var(--ma-primary-ink);
-            color: #fff;
+            color: var(--ma-surface);
         }
     }
 
@@ -383,14 +433,6 @@ $hub-reason-tones: (
         min-width: 0;
     }
 
-    .hub-col--reason {
-        display: flex;
-        flex-wrap: wrap;
-        grid-area: reason;
-        gap: 0.25rem;
-        min-width: 0;
-    }
-
     .hub-col--status {
         grid-area: status;
         min-width: 0;
@@ -499,7 +541,7 @@ $hub-reason-tones: (
         &[aria-pressed="true"] {
             background-color: var(--ma-ink);
             border-color: var(--ma-ink);
-            color: #fff;
+            color: var(--ma-surface);
         }
     }
 
@@ -520,11 +562,17 @@ $hub-reason-tones: (
     }
 
     .hub-row-line:hover {
-        background-color: var(--ma-grey-fill);
+        background-color: var(--hub-row-tint);
+    }
+
+    .hub-row-line:hover .hub-row-toggle,
+    .hub-row:focus-within .hub-row-toggle,
+    .hub-row--open .hub-row-toggle {
+        opacity: 1;
     }
 
     .hub-row--open .hub-row-line {
-        background-color: var(--ma-grey-fill);
+        background-color: var(--hub-row-tint);
     }
 
     .hub-row-name {
@@ -544,16 +592,57 @@ $hub-reason-tones: (
         white-space: nowrap;
     }
 
-    // Reason tags (P9): a pill in the group's tone.
-    @each $reason, $tone in $hub-reason-tones {
-        .hub-reason--#{$reason} {
-            --ma-fill: var(--ma-#{$tone}-fill);
-            --ma-ink: var(--ma-#{$tone}-ink);
+    // The reason leads the status cell in bold (R1): text, not a pill; the row carries no colour of its own.
+    .hub-reason {
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .hub-reason + .hub-reason::before {
+        content: ", ";
+        font-weight: 400;
+    }
+
+    .hub-status-sep {
+        color: var(--ma-text-muted);
+    }
+
+    // One muted count opens the flags (R1).
+    .hub-flagwrap {
+        position: relative;
+    }
+
+    .hub-flagcount {
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--ma-text-muted);
+        font-size: $hub-font-small;
+        white-space: nowrap;
+    }
+
+    button.hub-flagcount {
+        text-decoration: underline dotted;
+        text-underline-offset: 0.15em;
+
+        &:hover,
+        &[aria-expanded="true"] {
+            color: var(--ma-text);
         }
     }
 
-    .hub-reason {
-        white-space: nowrap;
+    .hub-flaglist {
+        position: absolute;
+        z-index: 3;
+        top: 100%;
+        right: 0;
+        min-width: 10rem;
+        margin-top: 0.25rem;
+        padding: 0.35rem 0.5rem;
+        border: 1px solid var(--ma-border);
+        border-radius: 0.35rem;
+        background-color: var(--ma-surface);
+        box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15);
     }
 
     // The stacked bar (P5): segments painted over one another on a white track, the key number under it.
@@ -575,7 +664,7 @@ $hub-reason-tones: (
         background-color: var(--hub-seg);
         // A hairline of the track's white at each segment's end, so neighbouring tones that are under 3:1 against
         // each other still read as separate segments (CONTRAST.md).
-        box-shadow: 1px 0 0 var(--ma-surface, #fff);
+        box-shadow: 1px 0 0 var(--ma-surface);
     }
 
     .hub-stack-text {
@@ -591,6 +680,7 @@ $hub-reason-tones: (
         margin-top: 0;
     }
 
+    // The chevron shows on hover or focus (R1), always where there is no pointer to hover with.
     .hub-row-toggle {
         display: inline-flex;
         align-items: center;
@@ -602,6 +692,16 @@ $hub-reason-tones: (
         border-radius: 999px;
         background: none;
         color: var(--ma-text-muted);
+        opacity: 0;
+        transition: opacity 0.15s;
+
+        @media (prefers-reduced-motion: reduce) {
+            transition: none;
+        }
+
+        @media (hover: none) {
+            opacity: 1;
+        }
 
         &:hover {
             border-color: var(--ma-grey-border);
@@ -649,6 +749,19 @@ $hub-reason-tones: (
         color: var(--ma-grey-ink);
         font-size: $hub-font-small;
         line-height: 1.6;
+    }
+
+    .hub-happened {
+        margin: 0;
+    }
+
+    .hub-happened-item {
+        padding: 0.1rem 0;
+
+        time {
+            color: var(--ma-text-muted);
+            font-variant-numeric: tabular-nums;
+        }
     }
 
     .hub-detail-bars {
@@ -731,7 +844,7 @@ $hub-reason-tones: (
         &:hover,
         &:focus {
             background-color: var(--bs-danger, var(--danger, #ca3120));
-            color: #fff;
+            color: var(--ma-surface);
         }
     }
 
@@ -748,20 +861,21 @@ $hub-reason-tones: (
         padding: 0.6rem 1rem;
         border-radius: 0.3rem;
         box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.25);
+        // Inverted: the text colour as its surface, the surface colour as its text, in both colour modes.
         background-color: var(--ma-text);
-        color: #fff;
+        color: var(--ma-surface);
         transform: translateX(-50%);
     }
 
     .hub-toast-undo {
         --ma-rest: transparent;
-        --ma-line: #fff;
-        --ma-ink: #fff;
-        --ma-hover: rgba(255, 255, 255, 0.15);
+        --ma-line: var(--ma-surface);
+        --ma-ink: var(--ma-surface);
+        --ma-hover: color-mix(in srgb, var(--ma-surface) 15%, transparent);
     }
 
-    // The view editor (P7): a panel on the right over the page, the list still visible beside it on a wide screen;
-    // the whole screen on a phone.
+    // The view editor (P7, E1): a dialog over the whole window, in three columns on a wide screen (Departments,
+    // Module codes and exceptions, the view itself), stacked on a phone. The department tree scrolls on its own.
     .hub-scrim {
         position: fixed;
         z-index: 1040;
@@ -773,13 +887,8 @@ $hub-reason-tones: (
         display: flex;
         position: fixed;
         z-index: 1050;
-        top: 0;
-        right: 0;
-        bottom: 0;
+        inset: 0;
         flex-direction: column;
-        // stylelint-disable-next-line csstree/validator
-        width: min(26rem, 100vw);
-        box-shadow: -0.25rem 0 1rem rgba(0, 0, 0, 0.2);
         background-color: var(--ma-surface);
         color: var(--ma-text);
     }
@@ -803,9 +912,64 @@ $hub-reason-tones: (
     }
 
     .hub-panel-body {
+        display: flex;
         flex: 1 1 auto;
+        flex-direction: column;
+        min-height: 0;
         overflow-y: auto;
         padding: 0.5rem 1rem 1rem;
+        gap: 0.5rem;
+
+        @media (min-width: 62rem) {
+            display: grid;
+            grid-template-columns: minmax(16rem, 1.2fr) minmax(16rem, 1fr) minmax(14rem, 0.8fr);
+            gap: 0 2rem;
+            overflow: hidden;
+        }
+    }
+
+    .hub-panel-col {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+
+        @media (min-width: 62rem) {
+            overflow-y: auto;
+        }
+    }
+
+    .hub-panel-col--tree,
+    .hub-panel-section--tree,
+    .hub-panel-section--tree .hub-catpicker {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .hub-panel-col--tree {
+        @media (min-width: 62rem) {
+            overflow: hidden;
+        }
+    }
+
+    .hub-panel-section--tree .hub-tree {
+        flex: 1 1 auto;
+        min-height: 6rem;
+        max-height: 16rem;
+
+        @media (min-width: 62rem) {
+            max-height: none;
+        }
+    }
+
+    .hub-panel-colhead {
+        font-size: 1rem;
+    }
+
+    .hub-panel-sublabel {
+        display: block;
+        margin: 0.25rem 0;
     }
 
     .hub-panel-section {
@@ -842,6 +1006,18 @@ $hub-reason-tones: (
         input {
             margin-right: 0.35rem;
         }
+    }
+
+    .hub-tree-item--dim {
+        opacity: 0.6;
+    }
+
+    .hub-catpicker-search {
+        margin-bottom: 0.35rem;
+    }
+
+    .hub-catpicker-empty {
+        margin: 0.25rem 0;
     }
 
     @for $depth from 2 through 6 {
@@ -914,8 +1090,11 @@ $hub-reason-tones: (
     @container ma (width < 62rem) {
         .hub-colhead,
         .hub-row-line {
-            --hub-columns: 2rem minmax(0, 1fr) 5.5rem minmax(7rem, 9rem) minmax(5rem, auto) 2rem;
-            --hub-areas: "icon name module reason flags toggle" "icon status status progress progress toggle";
+            // Fixed tracks on the second line too (A1): the bar and the flags line up down the list.
+            // The status sentence gets the width of the name, the module and the flags, so it stays on one line at
+            // the Dashboard's 782px; the bar keeps the 9rem it has in the one-line row.
+            --hub-columns: 2rem minmax(0, 1fr) 6.5rem 4.5rem 9rem 2rem;
+            --hub-areas: "icon name module flags flags toggle" "icon status status status progress toggle";
         }
 
         .hub-colhead {
@@ -933,8 +1112,8 @@ $hub-reason-tones: (
     @container ma (width < 34rem) {
         .hub-colhead,
         .hub-row-line {
-            --hub-columns: 2rem minmax(0, 1fr) auto 2rem;
-            --hub-areas: "icon name name toggle" "icon module reason toggle" "icon status status toggle" "icon progress flags toggle";
+            --hub-columns: 2rem minmax(0, 1fr) 4.5rem 2rem;
+            --hub-areas: "icon name name toggle" "icon module flags toggle" "icon status status toggle" "icon progress progress toggle";
         }
 
         .hub-row-line {
@@ -963,4 +1142,10 @@ $hub-reason-tones: (
             display: none;
         }
     }
+}
+
+// Dark mode body text a step brighter than Boost's, as My assessments sets it for its own block (DM1): the hub's
+// rows and dates take their colour from this variable too.
+[data-bs-theme="dark"] .block_le_hub_dashboard {
+    --bs-body-color: #ecf0f4;
 }

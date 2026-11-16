@@ -118,13 +118,32 @@ Feature: Hub staff shape what they see with saved views, and ignore what is not 
     Then I should see "Problem sheet 4" in the "Hub dashboard" block
 
   @javascript
-  Scenario: The view editor opens beside the list and the list updates as rules change
+  Scenario: The list behind the view editor updates as rules change
     Given a summative "assign" "Sheet 3" in "MTH3005" was due "3 days ago"
     When I log in as "hub1" and view the "Hub dashboard"
     And I click on "This view" "button" in the "Hub dashboard" "block"
     And I click on "Edit what this view shows" "link" in the "Hub dashboard" "block"
-    Then the view editor should open as a side panel
-    And the first assessment row should still be visible
-    When I add the module code line "starts with" "MTH3" to the view editor
-    Then I should see "Sheet 3" in the "Hub dashboard" block
-    And the view editor should say "5 of 6 modules"
+    And I add the module code line "starts with" "MTH3" to the view editor
+    Then the view editor should say "5 of 6 modules"
+    When I press Escape in the view editor
+    Then there should be a hub row "Sheet 3"
+
+  @javascript
+  Scenario: The view editor opens as a full-screen dialog in three columns
+    When I log in as "hub1" and view the "Hub dashboard"
+    And I click on "This view" "button" in the "Hub dashboard" "block"
+    And I click on "Edit what this view shows" "link" in the "Hub dashboard" "block"
+    Then the view editor should fill the window
+    And the view editor should have the columns "Departments, Module codes, This view"
+    And the department tree should scroll on its own
+    When I press Escape in the view editor
+    Then the view editor should be closed
+
+  @javascript
+  Scenario: A code rule with two words matches modules whose code holds both
+    Given the module "MTH1001-2627" in the category "Biosciences" has a summative "assign" "Problem sheet 1" due "3 days ago"
+    And the module "MTH1002-2526" in the category "Biosciences" has a summative "assign" "Problem sheet 2" due "3 days ago"
+    When I log in as "hub1" and view the "Hub dashboard"
+    And I create a hub view "This year's maths" with module codes starting with "MTH1 2627" or ""
+    Then there should be a hub row "Problem sheet 1"
+    And there should not be a hub row "Problem sheet 2"
