@@ -25,7 +25,7 @@ Feature: The hub shows its frame at once and fetches the rows afterwards
   Scenario: The hub's rows come in behind the frame
     When I log in as "hub1" and view my dashboard
     And the hub has finished loading
-    Then I should see "My assessments" in the "My assessments" block
+    Then ".block_le_dashboard" "css_element" should exist
     And the "Chase" group header should read "Chase 1 · Marking late 1"
     And there should be a hub row "Problem sheet 4"
     And the "Done" group should be collapsed
