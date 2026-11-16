@@ -321,15 +321,20 @@ final class views {
             $ors[] = "co.category $insql";
             $params += $inparams;
         }
-        foreach ($view->starts as $text) {
-            $k = $p . 's' . ++$i;
-            $ors[] = $DB->sql_like('co.shortname', ":$k", false, false);
-            $params[$k] = $DB->sql_like_escape($text) . '%';
-        }
-        foreach ($view->contains as $text) {
-            $k = $p . 'n' . ++$i;
-            $ors[] = $DB->sql_like('co.shortname', ":$k", false, false);
-            $params[$k] = '%' . $DB->sql_like_escape($text) . '%';
+        // A code line's words all have to match (F1): "starts with" applies to the first word, the rest are held
+        // anywhere in the code; "contains" holds every word anywhere.
+        foreach (['starts', 'contains'] as $kind) {
+            foreach ($view->$kind as $text) {
+                $ands = [];
+                foreach (self::code_words($text) as $n => $word) {
+                    $k = $p . $kind[0] . ++$i;
+                    $ands[] = $DB->sql_like('co.shortname', ":$k", false, false);
+                    $params[$k] = ($kind === 'starts' && $n === 0 ? '' : '%') . $DB->sql_like_escape($word) . '%';
+                }
+                if ($ands) {
+                    $ors[] = '(' . implode(' AND ', $ands) . ')';
+                }
+            }
         }
         if ($view->course) {
             [$insql, $inparams] = $DB->get_in_or_equal($view->course, SQL_PARAMS_NAMED, $p . 'a');
@@ -376,17 +381,31 @@ final class views {
             }
         }
         $code = \core_text::strtolower($course->shortname);
-        foreach ($view->starts as $text) {
-            if ($text !== '' && str_starts_with($code, \core_text::strtolower($text))) {
-                return true;
-            }
-        }
-        foreach ($view->contains as $text) {
-            if ($text !== '' && str_contains($code, \core_text::strtolower($text))) {
-                return true;
+        foreach (['starts', 'contains'] as $kind) {
+            foreach ($view->$kind as $text) {
+                $words = self::code_words($text);
+                $matches = (bool)$words;
+                foreach ($words as $n => $word) {
+                    $word = \core_text::strtolower($word);
+                    $first = $kind === 'starts' && $n === 0;
+                    $matches = $matches && ($first ? str_starts_with($code, $word) : str_contains($code, $word));
+                }
+                if ($matches) {
+                    return true;
+                }
             }
         }
         return in_array((int)$course->id, $view->course);
+    }
+
+    /**
+     * The words of a code line (F1): split on spaces, each one a part the code must hold.
+     *
+     * @param string $text
+     * @return string[]
+     */
+    public static function code_words(string $text): array {
+        return array_values(array_filter(preg_split('/\s+/', trim($text))));
     }
 
     /**

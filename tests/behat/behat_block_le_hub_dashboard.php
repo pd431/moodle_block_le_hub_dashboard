@@ -941,9 +941,10 @@ class behat_block_le_hub_dashboard extends behat_base {
         $this->getSession()->executeScript("document.querySelector('" . self::BLOCK
             . " [data-action=\"find\"]').dispatchEvent(new Event('input', {bubbles: true}))");
         $this->wait_for_pending_js();
-        // The Find box waits a moment after typing before asking the server.
+        // The Find box waits a moment after typing before narrowing the list and asking the server.
         $this->getSession()->wait(1000, "document.querySelector('" . self::BLOCK
             . " [data-region=\"hub-suggest\"]:not([hidden])')");
+        $this->wait_for_pending_js();
     }
 
     /**
@@ -1878,14 +1879,15 @@ class behat_block_le_hub_dashboard extends behat_base {
         foreach ($this->find_all('css', self::BLOCK . ' [data-region="hub-editor"] .hub-panel-colhead') as $heading) {
             $actual[] = trim($heading->getText());
         }
-        $tops = $this->getSession()->evaluateScript("return Array.from(document.querySelectorAll('" . self::BLOCK .
-            " [data-region=\"hub-editor-col\"]')).map(function (c) { return Math.round(c.getBoundingClientRect().top); });");
+        $script = "return Array.from(document.querySelectorAll('" . self::BLOCK . " [data-region=\"hub-editor-col\"]'))" .
+            ".map(function (c) { return Math.round(c.getBoundingClientRect().top); });";
+        $tops = $this->getSession()->evaluateScript($script);
         if ($actual !== array_map('trim', explode(',', $headings))) {
             throw new ExpectationException("The editor's columns are '" . implode(', ', $actual) . "'", $this->getSession());
         }
         if (count(array_unique($tops)) !== 1) {
-            throw new ExpectationException("The editor's columns are not side by side: tops " . implode(', ', $tops),
-                $this->getSession());
+            $message = "The editor's columns are not side by side: tops " . implode(', ', $tops);
+            throw new ExpectationException($message, $this->getSession());
         }
     }
 
@@ -1927,5 +1929,30 @@ class behat_block_le_hub_dashboard extends behat_base {
         $this->getSession()->executeScript("document.querySelector('" . self::BLOCK . " [data-region=\"hub-editor\"]')" .
             ".dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}))");
         $this->wait_for_pending_js();
+    }
+
+    // Find (F1, F2).
+
+    /**
+     * I press the enter key in the hub "Find" box.
+     *
+     * @When /^I press the enter key in the hub "Find" box$/
+     */
+    public function i_press_enter_in_find(): void {
+        $this->getSession()->executeScript("document.querySelector('" . self::BLOCK . " [data-action=\"find\"]')" .
+            ".dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}))");
+        $this->wait_for_pending_js();
+    }
+
+    /**
+     * The hub "Find" box should be empty.
+     *
+     * @Then /^the hub "Find" box should be empty$/
+     */
+    public function find_should_be_empty(): void {
+        $value = $this->find('css', self::BLOCK . ' [data-action="find"]')->getValue();
+        if ($value !== '') {
+            throw new ExpectationException("The Find box holds '$value'", $this->getSession());
+        }
     }
 }

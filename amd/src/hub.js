@@ -69,7 +69,7 @@ const SELECTORS = {
 };
 
 /** How long Find waits after a keystroke before asking the server. */
-const FIND_DELAY = 250;
+const FIND_DELAY = 300;
 /** How long the editor waits after typing in a code rule before saving. */
 const SAVE_DELAY = 500;
 /** How long the toast stays. */
@@ -83,6 +83,15 @@ const BATCH = 25;
  * @param {Element} target
  * @returns {boolean}
  */
+/**
+ * Whether a row's search text holds every word of some text (F1).
+ *
+ * @param {string} search
+ * @param {string} text
+ * @returns {boolean}
+ */
+const holdsWords = (search, text) => text.split(/\s+/).filter(Boolean).every(word => search.includes(word));
+
 const interactive = target => Boolean(target.closest('a, button, input, select, textarea, label, [data-action]'));
 
 /**
@@ -99,6 +108,7 @@ class Hub {
         this.type = state.type || 'summative';
         // Word filters, each {text, mode: 'only'|'not'} (P2); never saved (P8).
         this.words = [];
+        this.live = '';
         // Filter keys: "r:<reason>" or "f:<flag>" (P3).
         this.filters = new Set();
         this.expanded = new Set();
@@ -304,12 +314,22 @@ class Hub {
             clearTimeout(this.findTimer);
             this.settle('find');
             const text = e.target.value.trim();
-            if (text.length < 2) {
+            if (text === '') {
                 this.closeSuggest();
+                this.setLive('');
                 return;
             }
             this.wait('find');
-            this.findTimer = setTimeout(() => this.suggest(text).finally(() => this.settle('find')), FIND_DELAY);
+            // The list narrows as you type (F2), then the people who match are offered.
+            this.findTimer = setTimeout(() => {
+                this.setLive(text);
+                if (text.length < 2) {
+                    this.closeSuggest();
+                    this.settle('find');
+                    return;
+                }
+                this.suggest(text).finally(() => this.settle('find')).catch(Notification.exception);
+            }, FIND_DELAY);
         } else if (action === 'shape' && e.target.dataset.kind === 'codevalue') {
             clearTimeout(this.saveTimer);
             this.settle('save');
@@ -388,12 +408,18 @@ class Hub {
                     ? Math.min(items.length - 1, this.suggestIndex + 1) : Math.max(0, this.suggestIndex - 1);
                 this.markSuggest(items);
             } else if (e.key === 'Enter') {
+                // Enter pins the words as a chip (F2), unless a suggestion was picked with the arrow keys. A
+                // leading "-" makes it an exclusion. The page's own combobox handling does not get the key.
                 e.preventDefault();
-                const item = items[this.suggestIndex] || items[0];
+                e.stopPropagation();
+                const item = this.suggestIndex >= 0 ? items[this.suggestIndex] : null;
+                const text = target.value.trim();
                 if (item) {
                     item.click();
-                } else if (target.value.trim()) {
-                    this.addWord(target.value.trim(), 'only');
+                } else if (text.startsWith('-') && text.length > 1) {
+                    this.addWord(text.slice(1).trim(), 'not');
+                } else if (text) {
+                    this.addWord(text, 'only');
                 }
             } else if (e.key === 'Escape') {
                 this.closeSuggest();
@@ -668,9 +694,23 @@ class Hub {
             box.value = '';
             box.focus();
         }
+        this.live = '';
         this.closeSuggest();
         this.renderChips().catch(Notification.exception);
         this.apply();
+    }
+
+    /**
+     * What is in the Find box narrows the list as it is typed (F2), before it is pinned as a chip.
+     *
+     * @param {string} text
+     */
+    setLive(text) {
+        const live = text.startsWith('-') ? '' : text.toLowerCase();
+        if (live !== this.live) {
+            this.live = live;
+            this.apply();
+        }
     }
 
     /**
@@ -807,11 +847,15 @@ class Hub {
             return false;
         }
         const search = row.dataset.search || '';
+        // Space means AND (F1): every word of a chip, or of what is being typed, has to be in the row.
         for (const word of this.words) {
-            const has = search.includes(word.text);
+            const has = holdsWords(search, word.text);
             if (word.mode === 'only' ? !has : has) {
                 return false;
             }
+        }
+        if (this.live && !holdsWords(search, this.live)) {
+            return false;
         }
         const flags = (row.dataset.flags || '').split(' ');
         for (const key of this.filters) {
@@ -861,7 +905,7 @@ class Hub {
                 return text;
             }).catch(Notification.exception);
         }
-        const filtering = this.type !== 'both' || this.words.length > 0 || this.filters.size > 0;
+        const filtering = this.type !== 'both' || this.words.length > 0 || this.filters.size > 0 || this.live !== '';
         let anyMatch = false;
         view.querySelectorAll(SELECTORS.group).forEach(group => {
             const key = group.dataset.group;

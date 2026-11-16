@@ -139,3 +139,12 @@ Feature: Hub staff shape what they see with saved views, and ignore what is not 
     And the department tree should scroll on its own
     When I press Escape in the view editor
     Then the view editor should be closed
+
+  @javascript
+  Scenario: A code rule with two words matches modules whose code holds both
+    Given a summative "assign" "Problem sheet 1" in "MTH1001-2627" under "Biosciences" was due "3 days ago"
+    And a summative "assign" "Problem sheet 2" in "MTH1002-2526" under "Biosciences" was due "3 days ago"
+    When I log in as "hub1" and view the "Hub dashboard"
+    And I create a hub view "This year's maths" with module codes starting with "MTH1 2627" or ""
+    Then there should be a hub row "Problem sheet 1"
+    And there should not be a hub row "Problem sheet 2"
