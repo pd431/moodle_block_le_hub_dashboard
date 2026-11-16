@@ -1657,4 +1657,82 @@ class behat_block_le_hub_dashboard extends behat_base {
     public function page_should_not_contain_the_tree(): void {
         $this->execute('behat_general::should_not_exist', [self::BLOCK . ' .hub-tree', 'css_element']);
     }
+
+    // Categories the hub works in (C1).
+
+    /**
+     * The hub's valid categories are "<paths>".
+     *
+     * @Given /^the hub's valid categories are "(?P<paths>[^"]*)"$/
+     * @param string $paths
+     */
+    public function valid_categories(string $paths): void {
+        self::write('valid_categories', [$paths]);
+    }
+
+    /**
+     * The course category "<name>" exists under "<parent>".
+     *
+     * @Given /^the course category "(?P<name>[^"]*)" exists under "(?P<parent>[^"]*)"$/
+     * @param string $name
+     * @param string $parent
+     */
+    public function category_exists_under(string $name, string $parent): void {
+        self::write('category_exists_under', [$name, $parent]);
+    }
+
+    /**
+     * A summative "assign" "<name>" in "<course>" under "<category>" was due "<due>": the course is created there.
+     *
+     * @phpcs:ignore moodle.Files.LineLength.TooLong, moodle.Files.LineLength.MaxExceeded
+     * @Given /^an? (?P<tag>summative|formative) "(?P<mod>\w+)" "(?P<name>[^"]*)" in "(?P<course>[^"]*)" under "(?P<category>[^"]*)" (?:is|was) due "(?P<due>[^"]*)"$/
+     * @param string $tag
+     * @param string $modname
+     * @param string $name
+     * @param string $course
+     * @param string $category
+     * @param string $due
+     */
+    public function assessment_in_category(
+        string $tag,
+        string $modname,
+        string $name,
+        string $course,
+        string $category,
+        string $due
+    ): void {
+        self::write('assessment_in_category', [$tag, $modname, $name, $course, $category, $due]);
+    }
+
+    /**
+     * I should not see "<text>" in the view editor under "<heading>".
+     *
+     * @Then /^I should not see "(?P<text>[^"]*)" in the view editor under "(?P<heading>[^"]*)"$/
+     * @param string $text
+     * @param string $heading
+     */
+    public function i_should_not_see_in_the_editor_under(string $text, string $heading): void {
+        $section = $this->find(
+            'xpath',
+            "//*[contains(@class, 'block_le_hub_dashboard')]//*[contains(@class, 'hub-panel-section')]" .
+            "[.//*[contains(@class, 'hub-panel-label')][normalize-space(.) = " . behat_context_helper::escape($heading) . ']]'
+        );
+        if (str_contains($section->getText(), $text)) {
+            throw new ExpectationException("'$text' is under '$heading' in the editor", $this->getSession());
+        }
+    }
+
+    /**
+     * The view editor should mark "<code>" as outside the hub's categories (C1).
+     *
+     * @Then /^the view editor should mark "(?P<code>[^"]*)" as outside the hub's categories$/
+     * @param string $code
+     */
+    public function editor_should_mark_outside(string $code): void {
+        $this->execute('behat_general::assert_element_contains_text', [
+            get_string('editor_outside', 'block_le_hub_dashboard', $code),
+            self::BLOCK . ' [data-region="hub-editor"] [data-region="hub-outside"]',
+            'css_element',
+        ]);
+    }
 }

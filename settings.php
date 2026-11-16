@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Settings: the two numbers the rules need (D4, P10).
+ * Settings: the categories the hub works in (C1) and the numbers the rules need (D4, P10, L3).
  *
  * @package    block_le_hub_dashboard
  * @copyright  2026 Pierre Camaly de Brosses - University of Exeter
@@ -25,6 +25,11 @@
 defined('MOODLE_INTERNAL') || die();
 
 if ($ADMIN->fulltree) {
+    $settings->add(new \block_le_hub_dashboard\admin\setting_categories(
+        'block_le_hub_dashboard/categories',
+        new lang_string('categories', 'block_le_hub_dashboard'),
+        new lang_string('categories_desc', 'block_le_hub_dashboard')
+    ));
     $settings->add(new admin_setting_configtext(
         'block_le_hub_dashboard/riskdays',
         new lang_string('riskdays', 'block_le_hub_dashboard'),

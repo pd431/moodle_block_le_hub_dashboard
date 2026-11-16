@@ -337,6 +337,11 @@ final class views {
             return ['1 = 0', []];
         }
         $where = '(' . implode(' OR ', $ors) . ')';
+        // Every line stays inside the categories the hub works in (C1).
+        if ($limit = categories::limit_sql('co', $p . 'u')) {
+            $where .= ' AND ' . $limit[0];
+            $params += $limit[1];
+        }
         if ($view->outcourse) {
             [$insql, $inparams] = $DB->get_in_or_equal($view->outcourse, SQL_PARAMS_NAMED, $p . 'o', false);
             $where .= " AND co.id $insql";
@@ -346,7 +351,8 @@ final class views {
     }
 
     /**
-     * Whether a course is in a view, as in_view_sql() without the ignored assessments.
+     * Whether a course is in a view, as in_view_sql() without the ignored assessments: inside the hub's categories
+     * (C1), matched by a line, not taken out.
      *
      * @param \stdClass $view
      * @param \stdClass $course With id, shortname, category.
@@ -358,6 +364,9 @@ final class views {
             return false;
         }
         $ids = array_map('intval', array_filter(explode('/', $categorypath)));
+        if (!categories::inside((int)end($ids))) {
+            return false;
+        }
         foreach ($view->cat as $catid) {
             if (in_array((int)$catid, $ids)) {
                 return true;
@@ -413,7 +422,7 @@ final class views {
      * @return array[] id, name, depth, parent
      */
     public static function categories(): array {
-        return categories::tree();
+        return categories::tree(true);
     }
 
     /**

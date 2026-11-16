@@ -339,6 +339,61 @@ class block_le_hub_dashboard_generator extends component_generator_base {
             . $markingdue . '"', $due);
     }
 
+
+    /**
+     * The administrator limited the hub to some categories (C1).
+     *
+     * @param string $paths Comma-separated "Faculty / Department" paths; the last name of each is looked up.
+     */
+    public function valid_categories(string $paths): void {
+        $ids = array_map([self::class, 'category'], explode(',', $paths));
+        set_config('categories', implode(',', $ids), 'block_le_hub_dashboard');
+    }
+
+    /**
+     * A course category exists under another.
+     *
+     * @param string $name
+     * @param string $parent The parent's name.
+     */
+    public function category_exists_under(string $name, string $parent): void {
+        global $DB;
+        if (!$DB->record_exists('course_categories', ['name' => $name])) {
+            testing_util::get_data_generator()->create_category(['name' => $name, 'parent' => self::category($parent)]);
+        }
+    }
+
+    /**
+     * An assessment in a course that is created in a category, with the fixture students enrolled.
+     *
+     * @param string $tag
+     * @param string $modname
+     * @param string $name
+     * @param string $course The short name.
+     * @param string $category
+     * @param string $due
+     */
+    public function assessment_in_category(
+        string $tag,
+        string $modname,
+        string $name,
+        string $course,
+        string $category,
+        string $due
+    ): void {
+        global $DB;
+        $gen = testing_util::get_data_generator();
+        if (!$DB->record_exists('course', ['shortname' => $course])) {
+            $gen->create_course(['fullname' => $course, 'shortname' => $course, 'category' => self::category($category),
+                'startdate' => strtotime('2026-09-28')]);
+            foreach (self::STUDENTS as $student) {
+                $gen->enrol_user(steps::userid($student), steps::course($course)->id, 'student');
+            }
+            $gen->enrol_user(steps::userid('marker1'), steps::course($course)->id, 'editingteacher');
+        }
+        self::steps()->an_assessment_is_due($tag, $modname, $name, $course, '', $due);
+    }
+
     /**
      * Several assessments, for scrolling scenarios.
      *

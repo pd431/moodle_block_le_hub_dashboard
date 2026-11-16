@@ -259,6 +259,29 @@ final class external_test extends \advanced_testcase {
         $this->assertFalse($context['loading']);
     }
 
+
+    /**
+     * A module added by code outside the hub's categories (C1) stays in the view but the editor marks it.
+     */
+    public function test_editor_marks_a_module_outside_the_hubs_categories(): void {
+        global $DB;
+        $this->hub();
+        $userid = (int)$this->user()->id;
+        $view = views::current($userid);
+        $his = (int)$DB->get_field('course', 'id', ['shortname' => 'HIS1']);
+        views::set_shape((int)$view->id, $userid, ['cat' => $view->cat, 'course' => ['HIS1']]);
+        $reply = external_api::clean_returnvalue(get_view::execute_returns(), get_view::execute(-1, -1, '', 0, true));
+        $this->assertStringContainsString('HIS1', $reply['editor']);
+        $this->assertStringNotContainsString('hub-outside', $reply['editor']);
+
+        $bio = $DB->get_field('course', 'category', ['shortname' => 'BIO1']);
+        set_config('categories', $bio, 'block_le_hub_dashboard');
+        \block_le_hub_dashboard\local\categories::reset();
+        $reply = external_api::clean_returnvalue(get_view::execute_returns(), get_view::execute(-1, -1, '', 0, true));
+        $this->assertStringContainsString("HIS1 is outside the hub's categories", html_entity_decode($reply['editor'], ENT_QUOTES));
+        $this->assertSame([$his], array_map('intval', views::current($userid)->course));
+    }
+
     /**
      * Every service answers when called the way the page calls it: by name, with the page's state alongside its own
      * arguments. The Ajax layer passes arguments in the declared order, so a method whose signature differs from

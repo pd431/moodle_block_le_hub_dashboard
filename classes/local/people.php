@@ -72,15 +72,21 @@ final class people {
 
     /**
      * SQL on the index (alias c) for the assessments one person has a part in: as a marker (allocated or marked) or
-     * as a student. The whole institution, whatever the view (D6).
+     * as a student. The whole institution, whatever the view (D6), within the hub's categories (C1).
      *
      * @param int $userid
      * @return array [sql, params]
      */
     public static function scope_sql(int $userid): array {
-        return ["(c.cmid IN (SELECT pm.cmid FROM {block_le_dashboard_mark} pm WHERE pm.allocatedto = :pu1 OR pm.markedby = :pu2)
-                  OR c.cmid IN (SELECT ps.cmid FROM {block_le_dashboard_stu} ps WHERE ps.userid = :pu3))",
-            ['pu1' => $userid, 'pu2' => $userid, 'pu3' => $userid]];
+        $sql = "(c.cmid IN (SELECT pm.cmid FROM {block_le_dashboard_mark} pm WHERE pm.allocatedto = :pu1 OR pm.markedby = :pu2)
+                  OR c.cmid IN (SELECT ps.cmid FROM {block_le_dashboard_stu} ps WHERE ps.userid = :pu3))";
+        $params = ['pu1' => $userid, 'pu2' => $userid, 'pu3' => $userid];
+        // Inside the categories the hub works in (C1), whole institution otherwise.
+        if ($limit = categories::limit_sql('co', 'pucat')) {
+            $sql .= " AND c.courseid IN (SELECT co.id FROM {course} co WHERE {$limit[0]})";
+            $params += $limit[1];
+        }
+        return [$sql, $params];
     }
 
     /**

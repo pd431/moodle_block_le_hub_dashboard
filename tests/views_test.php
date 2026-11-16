@@ -158,6 +158,41 @@ final class views_test extends \advanced_testcase {
     }
 
     /**
+     * The categories the hub works in (C1) bound every line: a department rule, a code rule, a module added by code
+     * and a person's scope stay inside them; the SQL and PHP forms agree; nothing set means every category.
+     */
+    public function test_valid_categories_bound_every_line(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->fixtures();
+        $u = (int)$this->getDataGenerator()->create_user()->id;
+        $everything = $this->view($u, ['cat' => [$this->cats['Science']->id, $this->cats['Arts']->id],
+            'contains' => ['1'], 'course' => $this->ids('HIS1')]);
+        $this->assertSame(['BIO1', 'PHY1', 'HIS1', 'MTH1001', 'MTH2003', 'ARTBIO'], $this->sql_picks($everything));
+
+        set_config('categories', $this->cats['Science']->id, 'block_le_hub_dashboard');
+        categories::reset();
+        $this->assertSame(['BIO1', 'PHY1'], $this->sql_picks($everything));
+        $this->assertSame($this->php_picks($everything), $this->sql_picks($everything));
+        $this->assertSame([], $this->sql_picks($this->view($u, ['course' => $this->ids('HIS1')])));
+        $this->assertSame([], $this->sql_picks($this->view($u, ['starts' => ['HIS']])));
+        $this->assertSame(['BIO1'], $this->sql_picks($this->view($u, ['cat' => [$this->cats['Biology']->id]])));
+        // The pickers offer the valid categories and what is under them only.
+        $this->assertSame(['Science', 'Biology'], array_column(views::categories(), 'name'));
+        $this->assertContains('Arts', array_column(categories::tree(false), 'name'));
+
+        $marker = (int)$this->getDataGenerator()->create_user()->id;
+        foreach (['HIS1', 'BIO1'] as $code) {
+            $DB->insert_record('block_le_dashboard_mark', (object)['cmid' => $this->cms[(int)$this->courses[$code]->id],
+                'unitid' => 1, 'unittype' => 'user', 'stage' => 1, 'allocatedto' => $marker, 'submitted' => 0, 'marked' => 0,
+                'released' => 0, 'flagged' => 0, 'counted' => 1]);
+        }
+        [$sql, $params] = \block_le_hub_dashboard\local\people::scope_sql($marker);
+        $scoped = $DB->get_fieldset_sql("SELECT c.courseid FROM {block_le_dashboard_cm} c WHERE $sql", $params);
+        $this->assertSame([(int)$this->courses['BIO1']->id], array_map('intval', $scoped));
+    }
+
+    /**
      * The SQL and PHP forms agree, and each kind of line does what it says.
      */
     public function test_in_view_sql_and_cm_in_view_agree(): void {

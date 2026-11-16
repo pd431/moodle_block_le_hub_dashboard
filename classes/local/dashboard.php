@@ -360,7 +360,10 @@ final class dashboard {
             }
         }
         $names = views::course_codes(array_merge($view->course, $view->outcourse));
-        $added = array_map(fn($id) => ['id' => (int)$id, 'code' => $names[$id] ?? (string)$id], $view->course);
+        $outside = self::outside_courses($view->course);
+        $added = array_map(fn($id) => ['id' => (int)$id, 'code' => $names[$id] ?? (string)$id,
+            'outside' => in_array((int)$id, $outside, true),
+            'outsidetext' => get_string('editor_outside', 'block_le_hub_dashboard', $names[$id] ?? (string)$id)], $view->course);
         $out = array_map(fn($id) => ['id' => (int)$id, 'code' => $names[$id] ?? (string)$id], $view->outcourse);
         $outcms = [];
         if ($view->outcm) {
@@ -388,6 +391,28 @@ final class dashboard {
             'outcourses' => $out, 'hasoutcourses' => !empty($out), 'outcms' => $outcms, 'hasoutcms' => !empty($outcms),
             'hasexceptions' => !empty($out) || !empty($outcms), 'allocdays' => (int)$view->allocdays,
             'modules' => get_string('modules_count', 'block_le_hub_dashboard', ['in' => $in, 'total' => $total])];
+    }
+
+    /**
+     * Which of some courses sit outside the categories the hub works in (C1): a view keeps a module it added by
+     * code, but its rows are not shown and the editor says so.
+     *
+     * @param int[] $courseids
+     * @return int[]
+     */
+    protected static function outside_courses(array $courseids): array {
+        global $DB;
+        if (!$courseids || categories::valid() === null) {
+            return [];
+        }
+        [$insql, $params] = $DB->get_in_or_equal(array_map('intval', $courseids), SQL_PARAMS_NAMED);
+        $out = [];
+        foreach ($DB->get_records_select_menu('course', "id $insql", $params, '', 'id, category') as $id => $category) {
+            if (!categories::inside((int)$category)) {
+                $out[] = (int)$id;
+            }
+        }
+        return $out;
     }
 
     /**

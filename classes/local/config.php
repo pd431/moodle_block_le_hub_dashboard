@@ -65,6 +65,16 @@ final class config {
     }
 
     /**
+     * The categories the hub works in (C1): the administrator's picks, as ids. Empty means every category.
+     *
+     * @return int[]
+     */
+    public static function categories(): array {
+        $value = (string)get_config('block_le_hub_dashboard', 'categories');
+        return array_values(array_unique(array_map('intval', array_filter(explode(',', $value), 'is_numeric'))));
+    }
+
+    /**
      * A whole-number setting, or its default when unset.
      *
      * @param string $name
