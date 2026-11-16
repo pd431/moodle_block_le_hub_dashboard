@@ -1,7 +1,7 @@
 # Colour contrast in the Hub dashboard
 
 The hub takes every colour from My assessments' `--ma-*` palette rather than defining colours of its own, so it goes
-dark with that palette when Moodle 5.3's colour mode sets `data-bs-theme="dark"` on the page (D1, beta3). The two
+dark with that palette when Moodle 5.3's colour mode sets `data-bs-theme="dark"` on the page (DM1, beta3). The two
 things the hub chooses for itself, the stacked bar's segment tones and the tint of a hovered or open row, are set
 once per mode in `scss/styles.scss`.
 

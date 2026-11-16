@@ -4,7 +4,7 @@ Feature: The hub meets its contrast targets in light and dark colour modes
   As hub staff
   I need every part of the hub to stay readable, in every state, whichever colour mode I use
 
-  # Pierre, 2026-11-14 (hub-beta3.feature, D1): dark mode as My assessments beta38 does it. Targets as there:
+  # Pierre, 2026-11-14 (hub-beta3.feature, its D1; cited as DM1 in the code): dark mode as My assessments beta38 does it. Targets as there:
   # every text APCA Lc 75 and WCAG 4.5:1; icons, bar segments, control outlines and focus indicators Lc 45 and
   # 3:1. Moodle 5.3 draws dark mode by setting data-bs-theme="dark" on the html tag; the light scenarios also run
   # on 4.5 and 5.2, which have no colour modes, and the dark ones skip there.

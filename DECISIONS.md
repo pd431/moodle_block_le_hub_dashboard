@@ -1,8 +1,9 @@
 # Decisions
 
-The reasons behind the Hub dashboard's rules, under stable keys that code comments cite. The keys come from the two
-approved scopes: `hub-view.feature` (D1 to D11, the behaviour) and `hub-view-simplified.feature` (P1 to P10, the
-presentation), both in the project's `hub-dashboard` folder. My assessments' own decisions (its DECISIONS.md, the HB
+The reasons behind the Hub dashboard's rules, under stable keys that code comments cite. The keys come from the three
+approved scopes: `hub-view.feature` (D1 to D11, the behaviour), `hub-view-simplified.feature` (P1 to P10, the
+presentation) and `hub-beta3.feature` (L, C, E, F, A, R and DM1: loading, categories, the editor, Find, alignment,
+the row and dark mode), all in the project's `hub-dashboard` folder. My assessments' own decisions (its DECISIONS.md, the HB
 series in particular) cover what its index records for the hub.
 
 ## Behaviour (D)
@@ -74,6 +75,61 @@ series in particular) cover what its index records for the hub.
   before the submission deadline" (site default 30). Inside the window, unallocated work is Ready to go: Allocate;
   before it, it stays In progress and its unallocated count still shows as a flag and under Filter.
 
+## Loading, categories, editor, Find, row and dark mode (beta3, `hub-beta3.feature`)
+
+Pierre, 2026-11-16: "We need to timeout loading the dashboard as we have about 30,000 courses ... Ideally, we get
+a partial load in a reasonable amount of time, or we load asynchronously and display things as they go"; valid
+categories for the administrator; a search box in both category pickers; a bigger editor; "space is an 'and'
+operator"; aligned columns; dark mode "in the same way that the Dashboard's 5.3 upgrade has done it"; and a calmer
+row ("a mix of current version and mockup C"). Approved "Yes to all".
+
+- **L1** The block renders its frame at once (control bar, group headers, strip) and the rows arrive by web service,
+  so the Dashboard page is never held up by the hub. A view of 25 rows or fewer renders inline, because Behat without
+  a browser, and a reader without JavaScript, must still see the rows; above that the page carries only the ids.
+- **L2** Rows are fetched in batches of 25 ids, groups filled in as each batch lands, counts "…" until a group has
+  its rows. The scope said one group at a time; a batch of ids is the same shape for the server and lets a slow
+  view show its first rows sooner, since the group split is only known once every row is classified.
+- **L3** A load budget in seconds (setting `loadseconds`, default 20). When the batches run over it the block says
+  "Still loading: this view covers N assessments. Narrow it, or try again." and stops asking; Try again resumes. The
+  server never cancels a query; the page just stops waiting.
+- **L4** The department tree is not in the page: the editor is rendered by its first opening, through the same
+  service as the rows, once per page.
+- **L5** "N of M modules" is computed with the editor, not on every load.
+- **L6** A view's category match is `co.category IN (...)` with the descendants resolved in PHP from the category
+  tree (cached per request in MUC), not a LIKE on the category path, so the planner uses the index on
+  `course.category`. Measured on a 30,000-course copy (NOTES.md): the match was not the slow part; the index
+  aggregates are, and a summary table is a separate scope if still needed.
+- **C1** The administrator sets the categories the hub works in (setting `categories`, a searchable tree; empty
+  means every category). The department picker offers only those and their descendants; code rules, "add by
+  code" and a person search match only courses under them (Q1, "Yes": the hub never shows work outside its
+  categories); a view that names a course outside them keeps it and the editor marks it "outside the hub's
+  categories". Saving keeps only ids that exist and stores the minimal cover.
+- **C2** Both pickers filter as you type (300 ms, every word must match, case-insensitive) and show the ancestors of
+  a match greyed so the path reads; ticked categories stay ticked while filtered.
+- **C3** Typical checkbox tree: ticking a category ticks everything under it; unticking a child leaves its parent
+  half-ticked. What is saved is the minimal cover (a fully ticked subtree saves its top category only), and the
+  match rule (a category and everything under it) is unchanged, so existing views keep their meaning.
+- **E1** The editor is a full-window dialog (`role="dialog"`, `aria-modal`, Escape closes) in three columns on a
+  wide screen (Departments; Module codes and exceptions; This view) and stacked on a phone. The list behind it
+  still updates as rules change.
+- **F1** Space means AND wherever words are typed: the Find box, a word chip, a code rule line. "starts with"
+  applies to the first word and "contains" to the rest; the SQL and PHP twins of a code line agree.
+- **F2** Find narrows the list live as you type; Enter pins the words as a chip, and a leading "-" makes the chip
+  an exclusion. People still come up as suggestions and a chosen person is still a scope banner (P2).
+- **A1** One fixed track list for the column header and every row; only the name flexes, and the stacked bar has one
+  width in every row. At the Dashboard's 782px the two-line layout stays, on fixed tracks of its own, so status,
+  bar and flags line up down the list.
+- **DM1** Dark mode as My assessments beta38 (the scope's D1; D1 here is access): the hub takes every colour from
+  the `--ma-*` palette, which My assessments re-points under `[data-bs-theme="dark"]`, and sets only its own two
+  choices per mode (bar segment tones, the hovered-row tint). No literal colour in the styles. CONTRAST.md
+  records both modes and `tests/behat/dark-mode.feature` checks them.
+- **R1** The row is a mix of the beta2 row and mockup C: the group header carries the group's colour as a tinted
+  band and the rows are neutral; the reason, in bold, leads the status cell and there is no reason column; flags
+  are one muted count that opens a list; the chevron shows on hover or focus (always where there is no pointer).
+  Kept from beta2: the type icon, the stacked bar with its key number, the module code in a figure column. The
+  expanded row gains "What has happened": deadlines, marking finished, release and notes in date order, in the
+  viewer's time zone.
+
 ## Deviations noted at delivery
 
 - The plugin is `block_le_hub_dashboard` (repository `moodle_block_le_hub_dashboard`), so the capability is
@@ -89,3 +145,7 @@ series in particular) cover what its index records for the hub.
 - Behat runs its browser against Moodle's own JavaScript waits: `core/ajax` does not register pending work in 4.5,
   so the hub's script registers its own (`core/pending`) around every service call and timer, or the steps that
   follow a click would read the page before the list had changed.
+- beta3: rows come in batches of 25 ids rather than one group at a time (L2), and a view of 25 rows or fewer is
+  rendered inline (L1). The budget message counts assessments, not modules, because that is what a batch holds.
+  The Escape step in Behat is the hub's own, since Moodle 4.5 has no "I press the escape key" step. The two-line
+  782px layout stays (A1). The `col_reason` string is no longer used by any template.
