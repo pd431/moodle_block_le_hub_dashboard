@@ -398,7 +398,9 @@ class Hub {
             } else if (e.key === 'Escape') {
                 this.closeSuggest();
             }
-        } else if (e.key === 'Escape' && this.panelOpen && target.closest(SELECTORS.editor)) {
+        } else if (e.key === 'Escape' && this.panelOpen) {
+            // The editor is modal (E1): Escape closes it wherever the focus is.
+            e.preventDefault();
             this.closeEditor();
         } else if (e.key === 'Enter' && target.matches('[data-region="hub-addmodule"]')) {
             e.preventDefault();

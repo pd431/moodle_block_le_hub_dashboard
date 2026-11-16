@@ -1843,4 +1843,89 @@ class behat_block_le_hub_dashboard extends behat_base {
             }
         }
     }
+
+    // The editor as a dialog (E1).
+
+    /**
+     * The view editor should fill the window.
+     *
+     * @Then /^the view editor should fill the window$/
+     */
+    public function editor_should_fill_the_window(): void {
+        $fits = $this->getSession()->evaluateScript(
+            "return (function () { var r = document.querySelector('" . self::BLOCK . " [data-region=\"hub-editor\"]')" .
+            ".getBoundingClientRect(); return r.left <= 1 && r.top <= 1 && r.width >= window.innerWidth - 2 && " .
+            "r.height >= window.innerHeight - 2; })();"
+        );
+        if (!$fits) {
+            throw new ExpectationException('The view editor does not fill the window', $this->getSession());
+        }
+        $this->execute(
+            'behat_general::the_attribute_of_should_contain',
+            ['aria-modal', self::BLOCK . ' [data-region="hub-editor"]', 'css_element', 'true']
+        );
+    }
+
+    /**
+     * The view editor should have the columns "<headings>".
+     *
+     * @Then /^the view editor should have the columns "(?P<headings>[^"]*)"$/
+     * @param string $headings
+     */
+    public function editor_should_have_the_columns(string $headings): void {
+        $actual = [];
+        $tops = [];
+        foreach ($this->find_all('css', self::BLOCK . ' [data-region="hub-editor"] .hub-panel-colhead') as $heading) {
+            $actual[] = trim($heading->getText());
+        }
+        $tops = $this->getSession()->evaluateScript("return Array.from(document.querySelectorAll('" . self::BLOCK .
+            " [data-region=\"hub-editor-col\"]')).map(function (c) { return Math.round(c.getBoundingClientRect().top); });");
+        if ($actual !== array_map('trim', explode(',', $headings))) {
+            throw new ExpectationException("The editor's columns are '" . implode(', ', $actual) . "'", $this->getSession());
+        }
+        if (count(array_unique($tops)) !== 1) {
+            throw new ExpectationException("The editor's columns are not side by side: tops " . implode(', ', $tops),
+                $this->getSession());
+        }
+    }
+
+    /**
+     * The department tree should scroll on its own.
+     *
+     * @Then /^the department tree should scroll on its own$/
+     */
+    public function tree_should_scroll(): void {
+        $ok = $this->getSession()->evaluateScript(
+            "return (function () { var t = document.querySelector('" . self::BLOCK . " [data-region=\"hub-editor\"] .hub-tree');" .
+            " var s = getComputedStyle(t); return (s.overflowY === 'auto' || s.overflowY === 'scroll') && " .
+            "t.getBoundingClientRect().bottom <= window.innerHeight; })();"
+        );
+        if (!$ok) {
+            throw new ExpectationException('The department tree does not scroll on its own', $this->getSession());
+        }
+    }
+
+    /**
+     * The view editor should be closed.
+     *
+     * @Then /^the view editor should be closed$/
+     */
+    public function editor_should_be_closed(): void {
+        $editor = $this->getSession()->getPage()->find('css', self::BLOCK . ' [data-region="hub-editor"]');
+        if ($editor && $editor->isVisible()) {
+            throw new ExpectationException('The view editor is open', $this->getSession());
+        }
+    }
+
+    /**
+     * I press Escape in the view editor.
+     *
+     * @When /^I press Escape in the view editor$/
+     */
+    public function i_press_escape_in_the_editor(): void {
+        $this->find('css', self::BLOCK . ' [data-region="hub-editor"]')->keyPress(27);
+        $this->getSession()->executeScript("document.querySelector('" . self::BLOCK . " [data-region=\"hub-editor\"]')" .
+            ".dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}))");
+        $this->wait_for_pending_js();
+    }
 }

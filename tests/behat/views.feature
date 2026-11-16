@@ -128,3 +128,14 @@ Feature: Hub staff shape what they see with saved views, and ignore what is not 
     When I add the module code line "starts with" "MTH3" to the view editor
     Then I should see "Sheet 3" in the "Hub dashboard" block
     And the view editor should say "5 of 6 modules"
+
+  @javascript
+  Scenario: The view editor opens as a full-screen dialog in three columns
+    When I log in as "hub1" and view the "Hub dashboard"
+    And I click on "This view" "button" in the "Hub dashboard" "block"
+    And I click on "Edit what this view shows" "link" in the "Hub dashboard" "block"
+    Then the view editor should fill the window
+    And the view editor should have the columns "Departments, Module codes, This view"
+    And the department tree should scroll on its own
+    When I press Escape in the view editor
+    Then the view editor should be closed
