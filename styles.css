@@ -1,8 +1,8 @@
 /* block_le_hub_dashboard styles. Compiled from scss/styles.scss with Dart Sass; edit that file, not this one. */
 .block_le_dashboard_dashboard.le-hub {
     font-size: inherit;
-    --hub-columns: 2rem minmax(9rem, 1.5fr) 5.5rem minmax(7rem, 9rem) minmax(10rem, 1.5fr) 9rem minmax(5rem, auto) 2rem;
-    --hub-areas: "icon name module reason status progress flags toggle";
+    --hub-columns: 2rem minmax(8rem, 1fr) 6.5rem 20rem 9rem 4.5rem 2rem;
+    --hub-areas: "icon name module status progress flags toggle";
 }
 .block_le_dashboard_dashboard.le-hub .hub-controls {
     display: flex;
@@ -323,13 +323,6 @@
     grid-area: module;
     min-width: 0;
 }
-.block_le_dashboard_dashboard.le-hub .hub-col--reason {
-    display: flex;
-    flex-wrap: wrap;
-    grid-area: reason;
-    gap: 0.25rem;
-    min-width: 0;
-}
 .block_le_dashboard_dashboard.le-hub .hub-col--status {
     grid-area: status;
     min-width: 0;
@@ -441,6 +434,11 @@
 .block_le_dashboard_dashboard.le-hub .hub-row-line:hover {
     background-color: var(--ma-grey-fill);
 }
+.block_le_dashboard_dashboard.le-hub .hub-row-line:hover .hub-row-toggle,
+.block_le_dashboard_dashboard.le-hub .hub-row:focus-within .hub-row-toggle,
+.block_le_dashboard_dashboard.le-hub .hub-row--open .hub-row-toggle {
+    opacity: 1;
+}
 .block_le_dashboard_dashboard.le-hub .hub-row--open .hub-row-line {
     background-color: var(--ma-grey-fill);
 }
@@ -458,52 +456,48 @@
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
-.block_le_dashboard_dashboard.le-hub .hub-reason--release {
-    --ma-fill: var(--ma-attention-fill);
-    --ma-ink: var(--ma-attention-ink);
-}
-.block_le_dashboard_dashboard.le-hub .hub-reason--allocate {
-    --ma-fill: var(--ma-attention-fill);
-    --ma-ink: var(--ma-attention-ink);
-}
-.block_le_dashboard_dashboard.le-hub .hub-reason--late {
-    --ma-fill: var(--ma-primary-fill);
-    --ma-ink: var(--ma-primary-ink);
-}
-.block_le_dashboard_dashboard.le-hub .hub-reason--risk {
-    --ma-fill: var(--ma-primary-fill);
-    --ma-ink: var(--ma-primary-ink);
-}
-.block_le_dashboard_dashboard.le-hub .hub-reason--notsent {
-    --ma-fill: var(--ma-primary-fill);
-    --ma-ink: var(--ma-primary-ink);
-}
-.block_le_dashboard_dashboard.le-hub .hub-reason--early {
-    --ma-fill: var(--ma-primary-fill);
-    --ma-ink: var(--ma-primary-ink);
-}
-.block_le_dashboard_dashboard.le-hub .hub-reason--changedsent {
-    --ma-fill: var(--ma-primary-fill);
-    --ma-ink: var(--ma-primary-ink);
-}
-.block_le_dashboard_dashboard.le-hub .hub-reason--upcoming {
-    --ma-fill: var(--ma-info-fill);
-    --ma-ink: var(--ma-info-ink);
-}
-.block_le_dashboard_dashboard.le-hub .hub-reason--ontrack {
-    --ma-fill: var(--ma-info-fill);
-    --ma-ink: var(--ma-info-ink);
-}
-.block_le_dashboard_dashboard.le-hub .hub-reason--released {
-    --ma-fill: var(--ma-grey-fill);
-    --ma-ink: var(--ma-grey-ink);
-}
-.block_le_dashboard_dashboard.le-hub .hub-reason--changedrel {
-    --ma-fill: var(--ma-grey-fill);
-    --ma-ink: var(--ma-grey-ink);
-}
 .block_le_dashboard_dashboard.le-hub .hub-reason {
+    font-weight: 600;
     white-space: nowrap;
+}
+.block_le_dashboard_dashboard.le-hub .hub-reason + .hub-reason::before {
+    content: ", ";
+    font-weight: 400;
+}
+.block_le_dashboard_dashboard.le-hub .hub-status-sep {
+    color: var(--ma-text-muted);
+}
+.block_le_dashboard_dashboard.le-hub .hub-flagwrap {
+    position: relative;
+}
+.block_le_dashboard_dashboard.le-hub .hub-flagcount {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ma-text-muted);
+    font-size: 0.8203rem;
+    white-space: nowrap;
+}
+.block_le_dashboard_dashboard.le-hub button.hub-flagcount {
+    text-decoration: underline dotted;
+    text-underline-offset: 0.15em;
+}
+.block_le_dashboard_dashboard.le-hub button.hub-flagcount:hover,
+.block_le_dashboard_dashboard.le-hub button.hub-flagcount[aria-expanded=true] {
+    color: var(--ma-text);
+}
+.block_le_dashboard_dashboard.le-hub .hub-flaglist {
+    position: absolute;
+    z-index: 3;
+    top: 100%;
+    right: 0;
+    min-width: 10rem;
+    margin-top: 0.25rem;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--ma-border);
+    border-radius: 0.35rem;
+    background-color: var(--ma-surface);
+    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15);
 }
 .block_le_dashboard_dashboard.le-hub .hub-stack {
     position: relative;
@@ -544,6 +538,20 @@
     border-radius: 999px;
     background: none;
     color: var(--ma-text-muted);
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .block_le_dashboard_dashboard.le-hub .hub-row-toggle {
+        transition: none;
+    }
+}
+
+@media (hover: none) {
+    .block_le_dashboard_dashboard.le-hub .hub-row-toggle {
+        opacity: 1;
+    }
 }
 .block_le_dashboard_dashboard.le-hub .hub-row-toggle:hover {
     border-color: var(--ma-grey-border);
@@ -583,6 +591,16 @@
     color: var(--ma-grey-ink);
     font-size: 0.8203rem;
     line-height: 1.6;
+}
+.block_le_dashboard_dashboard.le-hub .hub-happened {
+    margin: 0;
+}
+.block_le_dashboard_dashboard.le-hub .hub-happened-item {
+    padding: 0.1rem 0;
+}
+.block_le_dashboard_dashboard.le-hub .hub-happened-item time {
+    color: var(--ma-text-muted);
+    font-variant-numeric: tabular-nums;
 }
 .block_le_dashboard_dashboard.le-hub .hub-detail-bars {
     display: flex;
@@ -874,8 +892,11 @@
 @container ma (width < 62rem) {
     .block_le_dashboard_dashboard.le-hub .hub-colhead,
     .block_le_dashboard_dashboard.le-hub .hub-row-line {
-        --hub-columns: 2rem minmax(0, 1fr) 5.5rem minmax(7rem, 9rem) minmax(5rem, auto) 2rem;
-        --hub-areas: "icon name module reason flags toggle" "icon status status progress progress toggle";
+        --hub-columns: 2rem minmax(0, 1fr) 6.5rem 9rem 4.5rem 2rem;
+        --hub-areas: "icon name module module flags toggle" "icon status status progress progress toggle";
+    }
+    .block_le_dashboard_dashboard.le-hub .hub-col--progress {
+        max-width: 15.5rem;
     }
     .block_le_dashboard_dashboard.le-hub .hub-colhead {
         display: none;
@@ -890,8 +911,8 @@
 @container ma (width < 34rem) {
     .block_le_dashboard_dashboard.le-hub .hub-colhead,
     .block_le_dashboard_dashboard.le-hub .hub-row-line {
-        --hub-columns: 2rem minmax(0, 1fr) auto 2rem;
-        --hub-areas: "icon name name toggle" "icon module reason toggle" "icon status status toggle" "icon progress flags toggle";
+        --hub-columns: 2rem minmax(0, 1fr) 4.5rem 2rem;
+        --hub-areas: "icon name name toggle" "icon module flags toggle" "icon status status toggle" "icon progress progress toggle";
     }
     .block_le_dashboard_dashboard.le-hub .hub-row-line {
         row-gap: 0.15rem;

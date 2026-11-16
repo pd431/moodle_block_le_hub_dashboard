@@ -458,7 +458,7 @@ class behat_block_le_hub_dashboard extends behat_base {
             throw new ExpectationException("'$name' is not in '$group'", $this->getSession());
         }
         if ($reason !== '') {
-            $tag = $row->find('xpath', ".//*[contains(@class, 'hub-reason')][1]");
+            $tag = $row->find('xpath', ".//*[contains(concat(' ', normalize-space(@class), ' '), ' hub-reason ')][1]");
             if (!$tag || trim($tag->getText()) !== $reason) {
                 throw new ExpectationException(
                     "'$name' leads with '" . ($tag ? $tag->getText() : '') . "', not '$reason'",
@@ -487,7 +487,8 @@ class behat_block_le_hub_dashboard extends behat_base {
      * @param string $reason
      */
     public function collapsed_row_should_show_reason_tag(string $name, string $reason): void {
-        foreach ($this->row($name)->findAll('xpath', ".//*[contains(@class, 'hub-reason')]") as $tag) {
+        $xpath = ".//*[contains(concat(' ', normalize-space(@class), ' '), ' hub-reason ')]";
+        foreach ($this->row($name)->findAll('xpath', $xpath) as $tag) {
             if (trim($tag->getText()) === $reason) {
                 return;
             }
@@ -608,8 +609,134 @@ class behat_block_le_hub_dashboard extends behat_base {
         if (!$button) {
             throw new ExpectationException("No '$flag' flag on '$name'", $this->getSession());
         }
+        if (!$button->isVisible()) {
+            $this->i_click_on_the_flag_count($name);
+        }
         $button->click();
         $this->wait_for_pending_js();
+    }
+
+    /**
+     * I click on the flag count of "<name>" (R1): opens the row's list of flags.
+     *
+     * @When /^I click on the flag count of "(?P<name>[^"]*)"$/
+     * @param string $name
+     */
+    public function i_click_on_the_flag_count(string $name): void {
+        $this->row($name)->find('css', '[data-action="flags"]')->click();
+        $this->wait_for_pending_js();
+    }
+
+    /**
+     * The collapsed row "<name>" should show the flag count "<text>" (R1).
+     *
+     * @Then /^the collapsed row "(?P<name>[^"]*)" should show the flag count "(?P<text>[^"]*)"$/
+     * @param string $name
+     * @param string $text
+     */
+    public function collapsed_row_should_show_flag_count(string $name, string $text): void {
+        $count = $this->row($name)->find('css', '[data-region="hub-flagcount"]');
+        $actual = $count ? trim($count->getText()) : '';
+        if ($actual !== $text) {
+            throw new ExpectationException("'$name' shows the flag count '$actual'", $this->getSession());
+        }
+    }
+
+    /**
+     * The collapsed row "<name>" should show the reason text "<reason>" (R1): bold text leading the status cell.
+     *
+     * @Then /^the collapsed row "(?P<name>[^"]*)" should show the reason text "(?P<reason>[^"]*)"$/
+     * @param string $name
+     * @param string $reason
+     */
+    public function collapsed_row_should_show_reason_text(string $name, string $reason): void {
+        $cell = $this->row($name)->find('css', '.hub-col--status');
+        $lead = $cell ? $cell->find('css', '[data-region="hub-row-reasons"] .hub-reason') : null;
+        if (!$lead || trim($lead->getText()) !== $reason) {
+            $text = $lead ? $lead->getText() : '';
+            throw new ExpectationException("'$name' leads its status with '$text'", $this->getSession());
+        }
+        $weight = $this->getSession()->evaluateScript("return getComputedStyle(document.querySelector('" . self::BLOCK .
+            " [data-region=\"hub-row\"] [data-region=\"hub-row-reasons\"] .hub-reason')).fontWeight;");
+        if ((int)$weight < 600) {
+            throw new ExpectationException("The reason text is not bold ($weight)", $this->getSession());
+        }
+    }
+
+    /**
+     * The collapsed row "<name>" should not show any pill (R1).
+     *
+     * @Then /^the collapsed row "(?P<name>[^"]*)" should not show any pill$/
+     * @param string $name
+     */
+    public function collapsed_row_should_not_show_any_pill(string $name): void {
+        $pills = $this->row($name)->findAll('css', '[data-region="hub-row-line"] .badge, [data-region="hub-row-line"] .ma-pill');
+        $visible = array_filter($pills, fn($p) => $p->isVisible());
+        if ($visible) {
+            throw new ExpectationException("'$name' shows " . count($visible) . ' pill(s)', $this->getSession());
+        }
+    }
+
+    /**
+     * The collapsed row "<name>" should use no accent colour (R1): no background behind any part of the line but
+     * the type icon and the bar, and no coloured text but links.
+     *
+     * @Then /^the collapsed row "(?P<name>[^"]*)" should use no accent colour$/
+     * @param string $name
+     */
+    public function collapsed_row_should_use_no_accent(string $name): void {
+        $id = $this->row($name)->getAttribute('id');
+        $found = $this->getSession()->evaluateScript("(function () {
+            var line = document.querySelector('#" . $id . " [data-region=\"hub-row-line\"]');
+            var out = [];
+            line.querySelectorAll('*').forEach(function (el) {
+                if (el.closest('.ma-row-modicon, [data-region=\"hub-stack\"], .hub-flaglist, .ma-tip')) { return; }
+                var bg = getComputedStyle(el).backgroundColor;
+                if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') { out.push(el.className + ': ' + bg); }
+            });
+            return out; })()");
+        if ($found) {
+            throw new ExpectationException("'$name' carries colour: " . implode('; ', $found), $this->getSession());
+        }
+    }
+
+    /**
+     * The "<group>" group header should carry the group's colour (R1): a tinted band, unlike the rows.
+     *
+     * @Then /^the "(?P<group>[^"]*)" group header should carry the group's colour$/
+     * @param string $group
+     */
+    public function group_header_should_carry_colour(string $group): void {
+        $colours = $this->getSession()->evaluateScript("(function () {
+            var header = Array.from(document.querySelectorAll('" . self::BLOCK . " [data-region=\"hub-group-header\"]'))
+                .find(function (h) { return h.querySelector('.hub-group-title').textContent.trim() === " .
+                json_encode($group) . "; });
+            var row = document.querySelector('" . self::BLOCK . " [data-region=\"hub-row-line\"]');
+            var c = document.createElement('canvas').getContext('2d');
+            var s = getComputedStyle(header);
+            return {header: s.backgroundColor + ' ' + s.backgroundImage, row: getComputedStyle(row).backgroundColor}; })()");
+        if (!$colours || $colours['header'] === $colours['row'] . ' none') {
+            throw new ExpectationException("The '$group' header is not tinted: " . json_encode($colours), $this->getSession());
+        }
+    }
+
+    /**
+     * The expanded row "<name>" should list what has happened in date order (R1).
+     *
+     * @Then /^the expanded row "(?P<name>[^"]*)" should list what has happened in date order$/
+     * @param string $name
+     */
+    public function expanded_row_should_list_what_has_happened(string $name): void {
+        $items = $this->row($name)->findAll('css', '[data-region="hub-happened"] .hub-happened-item');
+        if (!$items) {
+            throw new ExpectationException("'$name' lists nothing under What has happened", $this->getSession());
+        }
+        $times = array_map(fn($i) => (int)$i->getAttribute('data-time'), $items);
+        $sorted = $times;
+        sort($sorted);
+        if ($times !== $sorted) {
+            throw new ExpectationException('What has happened is not in date order: ' . implode(', ', $times), $this->getSession());
+        }
     }
 
     /**
@@ -1215,20 +1342,37 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
-     * The "Module" column of every collapsed row should start at the same x position.
+     * The "<column>" column of every collapsed row should start at the same x position (A1).
      *
-     * @Then /^the "Module" column of every collapsed row should start at the same x position$/
+     * @Then /^the "(?P<column>Module|Status|Progress|Flags)" column of every collapsed row should start at the same x position$/
+     * @param string $column
      */
-    public function module_columns_aligned(): void {
+    public function columns_aligned(string $column): void {
+        $class = '.hub-col--' . strtolower($column);
         $lefts = $this->getSession()->evaluateScript("(function () {
             return Array.from(document.querySelectorAll('" . self::BLOCK
-                . " li[data-region=\"hub-row\"]:not([hidden]) .hub-col--module'))
+                . " li[data-region=\"hub-row\"]:not([hidden]) $class'))
                 .map(function (el) { return Math.round(el.getBoundingClientRect().left); }); })()");
         if (count(array_unique($lefts)) > 1) {
             throw new ExpectationException(
-                'The Module column starts at ' . implode(', ', array_unique($lefts)),
+                "The $column column starts at " . implode(', ', array_unique($lefts)),
                 $this->getSession()
             );
+        }
+    }
+
+    /**
+     * Every collapsed row's stacked bar should be the same width (A1).
+     *
+     * @Then /^every collapsed row's stacked bar should be the same width$/
+     */
+    public function stacked_bars_same_width(): void {
+        $widths = $this->getSession()->evaluateScript("(function () {
+            return Array.from(document.querySelectorAll('" . self::BLOCK
+                . " li[data-region=\"hub-row\"]:not([hidden]) [data-region=\"hub-stack\"]'))
+                .map(function (el) { return Math.round(el.getBoundingClientRect().width); }); })()");
+        if (count($widths) < 2 || count(array_unique($widths)) > 1) {
+            throw new ExpectationException('The stacked bars are ' . implode(', ', $widths) . ' wide', $this->getSession());
         }
     }
 

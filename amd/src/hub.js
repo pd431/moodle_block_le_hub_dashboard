@@ -221,6 +221,9 @@ class Hub {
      */
     click(e) {
         const target = e.target.closest('[data-action]');
+        if (!e.target.closest('[data-region="hub-flagwrap"]')) {
+            this.toggleFlags(null);
+        }
         if (!target || !this.root.contains(target)) {
             // A click on the row line itself (not on a link, flag or button) opens the row.
             const line = e.target.closest(SELECTORS.rowLine);
@@ -241,6 +244,7 @@ class Hub {
             'jump': () => this.jump(target.dataset.group),
             'reason': () => this.toggleFilter(`r:${target.dataset.reason}`),
             'toggle-row': () => this.toggleRow(target.closest(SELECTORS.row)),
+            'flags': () => this.toggleFlags(target),
             'refresh': () => this.load(`${COMPONENT}_refresh`, {}),
             'retry-rows': () => this.retryRows(),
             'clear-person': () => this.load(`${COMPONENT}_get_view`, {personid: 0}),
@@ -398,32 +402,10 @@ class Hub {
     keydown(e) {
         const target = e.target;
         if (target.matches(SELECTORS.find)) {
-            const items = this.suggestItems();
-            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                if (!items.length) {
-                    return;
-                }
-                e.preventDefault();
-                this.suggestIndex = e.key === 'ArrowDown'
-                    ? Math.min(items.length - 1, this.suggestIndex + 1) : Math.max(0, this.suggestIndex - 1);
-                this.markSuggest(items);
-            } else if (e.key === 'Enter') {
-                // Enter pins the words as a chip (F2), unless a suggestion was picked with the arrow keys. A
-                // leading "-" makes it an exclusion. The page's own combobox handling does not get the key.
-                e.preventDefault();
-                e.stopPropagation();
-                const item = this.suggestIndex >= 0 ? items[this.suggestIndex] : null;
-                const text = target.value.trim();
-                if (item) {
-                    item.click();
-                } else if (text.startsWith('-') && text.length > 1) {
-                    this.addWord(text.slice(1).trim(), 'not');
-                } else if (text) {
-                    this.addWord(text, 'only');
-                }
-            } else if (e.key === 'Escape') {
-                this.closeSuggest();
-            }
+            this.findKeydown(e, target);
+        } else if (e.key === 'Escape' && target.closest('[data-region="hub-flagwrap"]')) {
+            this.toggleFlags(null);
+            target.closest('[data-region="hub-flagwrap"]').querySelector('[data-action="flags"]').focus();
         } else if (e.key === 'Escape' && this.panelOpen) {
             // The editor is modal (E1): Escape closes it wherever the focus is.
             e.preventDefault();
@@ -434,6 +416,41 @@ class Hub {
         } else if (e.key === 'Enter' && target.matches('[data-action="view-name"], [data-kind="codevalue"]')) {
             e.preventDefault();
             target.blur();
+        }
+    }
+
+    /**
+     * Keys in the Find box: arrows walk the suggestions, Enter pins, Escape closes the list.
+     *
+     * @param {KeyboardEvent} e
+     * @param {HTMLInputElement} target
+     */
+    findKeydown(e, target) {
+        const items = this.suggestItems();
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            if (!items.length) {
+                return;
+            }
+            e.preventDefault();
+            this.suggestIndex = e.key === 'ArrowDown'
+                ? Math.min(items.length - 1, this.suggestIndex + 1) : Math.max(0, this.suggestIndex - 1);
+            this.markSuggest(items);
+        } else if (e.key === 'Enter') {
+            // Enter pins the words as a chip (F2), unless a suggestion was picked with the arrow keys. A
+            // leading "-" makes it an exclusion. The page's own combobox handling does not get the key.
+            e.preventDefault();
+            e.stopPropagation();
+            const item = this.suggestIndex >= 0 ? items[this.suggestIndex] : null;
+            const text = target.value.trim();
+            if (item) {
+                item.click();
+            } else if (text.startsWith('-') && text.length > 1) {
+                this.addWord(text.slice(1).trim(), 'not');
+            } else if (text) {
+                this.addWord(text, 'only');
+            }
+        } else if (e.key === 'Escape') {
+            this.closeSuggest();
         }
     }
 
@@ -503,6 +520,29 @@ class Hub {
             this.expanded.delete(cmid);
         }
         this.applyRow(row);
+    }
+
+    /**
+     * Opens or closes a row's flag list (R1); one list open at a time.
+     *
+     * @param {HTMLElement|null} button The count button, or null to close whatever is open.
+     */
+    toggleFlags(button) {
+        const open = button && button.getAttribute('aria-expanded') !== 'true';
+        this.root.querySelectorAll('[data-action="flags"][aria-expanded="true"]').forEach(other => {
+            other.setAttribute('aria-expanded', 'false');
+            const list = other.parentNode.querySelector('[data-region="hub-flaglist"]');
+            if (list) {
+                list.hidden = true;
+            }
+        });
+        if (open) {
+            button.setAttribute('aria-expanded', 'true');
+            const list = button.parentNode.querySelector('[data-region="hub-flaglist"]');
+            if (list) {
+                list.hidden = false;
+            }
+        }
     }
 
     /**

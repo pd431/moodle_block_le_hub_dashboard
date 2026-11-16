@@ -31,19 +31,6 @@ $hub-group-tones: (
     "done": "grey",
 );
 
-$hub-reason-tones: (
-    "release": "attention",
-    "allocate": "attention",
-    "late": "primary",
-    "risk": "primary",
-    "notsent": "primary",
-    "early": "primary",
-    "changedsent": "primary",
-    "upcoming": "info",
-    "ontrack": "info",
-    "released": "grey",
-    "changedrel": "grey",
-);
 
 .block_le_dashboard_dashboard.le-hub {
     // The theme's body size, not My assessments' small text.
@@ -51,8 +38,9 @@ $hub-reason-tones: (
 
     // Row columns (P5): icon, Assessment, Module, Reason, Status, Progress, Flags, chevron. One rule, so the
     // column header and every row line up.
-    --hub-columns: 2rem minmax(9rem, 1.5fr) 5.5rem minmax(7rem, 9rem) minmax(10rem, 1.5fr) 9rem minmax(5rem, auto) 2rem;
-    --hub-areas: "icon name module reason status progress flags toggle";
+    // One fixed track list for the header and every row (A1): only the name flexes.
+    --hub-columns: 2rem minmax(8rem, 1fr) 6.5rem 20rem 9rem 4.5rem 2rem;
+    --hub-areas: "icon name module status progress flags toggle";
 
     .hub-controls {
         display: flex;
@@ -383,14 +371,6 @@ $hub-reason-tones: (
         min-width: 0;
     }
 
-    .hub-col--reason {
-        display: flex;
-        flex-wrap: wrap;
-        grid-area: reason;
-        gap: 0.25rem;
-        min-width: 0;
-    }
-
     .hub-col--status {
         grid-area: status;
         min-width: 0;
@@ -523,6 +503,12 @@ $hub-reason-tones: (
         background-color: var(--ma-grey-fill);
     }
 
+    .hub-row-line:hover .hub-row-toggle,
+    .hub-row:focus-within .hub-row-toggle,
+    .hub-row--open .hub-row-toggle {
+        opacity: 1;
+    }
+
     .hub-row--open .hub-row-line {
         background-color: var(--ma-grey-fill);
     }
@@ -544,16 +530,57 @@ $hub-reason-tones: (
         white-space: nowrap;
     }
 
-    // Reason tags (P9): a pill in the group's tone.
-    @each $reason, $tone in $hub-reason-tones {
-        .hub-reason--#{$reason} {
-            --ma-fill: var(--ma-#{$tone}-fill);
-            --ma-ink: var(--ma-#{$tone}-ink);
+    // The reason leads the status cell in bold (R1): text, not a pill; the row carries no colour of its own.
+    .hub-reason {
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .hub-reason + .hub-reason::before {
+        content: ", ";
+        font-weight: 400;
+    }
+
+    .hub-status-sep {
+        color: var(--ma-text-muted);
+    }
+
+    // One muted count opens the flags (R1).
+    .hub-flagwrap {
+        position: relative;
+    }
+
+    .hub-flagcount {
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--ma-text-muted);
+        font-size: $hub-font-small;
+        white-space: nowrap;
+    }
+
+    button.hub-flagcount {
+        text-decoration: underline dotted;
+        text-underline-offset: 0.15em;
+
+        &:hover,
+        &[aria-expanded="true"] {
+            color: var(--ma-text);
         }
     }
 
-    .hub-reason {
-        white-space: nowrap;
+    .hub-flaglist {
+        position: absolute;
+        z-index: 3;
+        top: 100%;
+        right: 0;
+        min-width: 10rem;
+        margin-top: 0.25rem;
+        padding: 0.35rem 0.5rem;
+        border: 1px solid var(--ma-border);
+        border-radius: 0.35rem;
+        background-color: var(--ma-surface);
+        box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15);
     }
 
     // The stacked bar (P5): segments painted over one another on a white track, the key number under it.
@@ -591,6 +618,7 @@ $hub-reason-tones: (
         margin-top: 0;
     }
 
+    // The chevron shows on hover or focus (R1), always where there is no pointer to hover with.
     .hub-row-toggle {
         display: inline-flex;
         align-items: center;
@@ -602,6 +630,16 @@ $hub-reason-tones: (
         border-radius: 999px;
         background: none;
         color: var(--ma-text-muted);
+        opacity: 0;
+        transition: opacity 0.15s;
+
+        @media (prefers-reduced-motion: reduce) {
+            transition: none;
+        }
+
+        @media (hover: none) {
+            opacity: 1;
+        }
 
         &:hover {
             border-color: var(--ma-grey-border);
@@ -649,6 +687,19 @@ $hub-reason-tones: (
         color: var(--ma-grey-ink);
         font-size: $hub-font-small;
         line-height: 1.6;
+    }
+
+    .hub-happened {
+        margin: 0;
+    }
+
+    .hub-happened-item {
+        padding: 0.1rem 0;
+
+        time {
+            color: var(--ma-text-muted);
+            font-variant-numeric: tabular-nums;
+        }
     }
 
     .hub-detail-bars {
@@ -976,8 +1027,13 @@ $hub-reason-tones: (
     @container ma (width < 62rem) {
         .hub-colhead,
         .hub-row-line {
-            --hub-columns: 2rem minmax(0, 1fr) 5.5rem minmax(7rem, 9rem) minmax(5rem, auto) 2rem;
-            --hub-areas: "icon name module reason flags toggle" "icon status status progress progress toggle";
+            // Fixed tracks on the second line too (A1): the bar and the flags line up down the list.
+            --hub-columns: 2rem minmax(0, 1fr) 6.5rem 9rem 4.5rem 2rem;
+            --hub-areas: "icon name module module flags toggle" "icon status status progress progress toggle";
+        }
+
+        .hub-col--progress {
+            max-width: 15.5rem;
         }
 
         .hub-colhead {
@@ -995,8 +1051,8 @@ $hub-reason-tones: (
     @container ma (width < 34rem) {
         .hub-colhead,
         .hub-row-line {
-            --hub-columns: 2rem minmax(0, 1fr) auto 2rem;
-            --hub-areas: "icon name name toggle" "icon module reason toggle" "icon status status toggle" "icon progress flags toggle";
+            --hub-columns: 2rem minmax(0, 1fr) 4.5rem 2rem;
+            --hub-areas: "icon name name toggle" "icon module flags toggle" "icon status status toggle" "icon progress progress toggle";
         }
 
         .hub-row-line {

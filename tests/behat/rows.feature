@@ -16,11 +16,14 @@ Feature: A collapsed row is one line of aligned columns, and opens for the detai
   Scenario: A collapsed row is one line of aligned columns under one column header
     When I log in as "hub1" and view the "Hub dashboard"
     And the page is shown at its full width
-    Then the row columns should be "Assessment, Module, Reason, Status, Progress, Flags"
+    Then the row columns should be "Assessment, Module, Status, Progress, Flags"
     And the "Module" column of every collapsed row should start at the same x position
     And the collapsed row "Problem sheet 4" should show "Problem sheet 4", "MTH2003"
     And the collapsed row "Problem sheet 4" should show the reason tag "Marking late"
     And the collapsed row "Problem sheet 4" should show the status "1 unmarked, 2 days past the marking deadline"
+    And the "Status" column of every collapsed row should start at the same x position
+    And the "Progress" column of every collapsed row should start at the same x position
+    And every collapsed row's stacked bar should be the same width
     And the collapsed row "Problem sheet 4" should show one stacked bar with segments "Submitted 2, Marked 1, Released 1"
     And the collapsed row "Problem sheet 4" should not show "Linear Algebra"
     And the collapsed row "Problem sheet 4" should not show "Iris Novak"
@@ -41,9 +44,11 @@ Feature: A collapsed row is one line of aligned columns, and opens for the detai
   Scenario: Collapsed-row flags are icons with counts, and the words are in the popover
     Given "student1" has an extension on "Problem sheet 4" to "in 3 days"
     When I log in as "hub1" and view the "Hub dashboard"
-    Then the collapsed row "Problem sheet 4" should show the icon flags "1 individual deadline, No allocation"
+    Then the collapsed row "Problem sheet 4" should show the flag count "2 flags"
+    And the collapsed row "Problem sheet 4" should show the icon flags "1 individual deadline, No allocation"
     And the collapsed row "Problem sheet 4" should not show the text "individual deadline"
-    When I click on the "1 individual deadline" flag of "Problem sheet 4"
+    When I click on the flag count of "Problem sheet 4"
+    And I click on the "1 individual deadline" flag of "Problem sheet 4"
     Then I should see "Students whose own deadline differs from the default"
 
   @javascript
@@ -141,3 +146,29 @@ Feature: A collapsed row is one line of aligned columns, and opens for the detai
     When I log in as "hub1" and view the "Hub dashboard"
     Then the collapsed row "Problem sheet 4" should link "Problem sheet 4" to the activity page
     And the collapsed row "Problem sheet 4" should link "MTH2003" to the course page
+
+  @javascript
+  Scenario: A collapsed row carries no colour of its own, a text reason and one flag count
+    Given "student1" has an extension on "Problem sheet 4" to "in 3 days"
+    When I log in as "hub1" and view the "Hub dashboard"
+    Then the collapsed row "Problem sheet 4" should use no accent colour
+    And the "Chase" group header should carry the group's colour
+    And the collapsed row "Problem sheet 4" should show the reason text "Marking late"
+    And the collapsed row "Problem sheet 4" should show one stacked bar with segments "Submitted 2, Marked 1, Released 1"
+    And the collapsed row "Problem sheet 4" should show the flag count "2 flags"
+    And the collapsed row "Problem sheet 4" should not show any pill
+    When I click on the flag count of "Problem sheet 4"
+    Then I should see "1 individual deadline" in the "Hub dashboard" block
+    When I expand the row "Problem sheet 4"
+    Then the expanded row "Problem sheet 4" should list what has happened in date order
+    And the expanded row "Problem sheet 4" should show the bars "Submitted, Marked, Released"
+
+  @javascript
+  Scenario: The header and every row share one set of columns however long a name is
+    Given a summative "assign" "A very long assessment name that would once have pushed the other columns along" in "MTH2003" was due "3 days ago" with marking due "in 10 days"
+    When I log in as "hub1" and view the "Hub dashboard"
+    And the page is shown at its full width
+    Then the "Module" column of every collapsed row should start at the same x position
+    And the "Status" column of every collapsed row should start at the same x position
+    And the "Progress" column of every collapsed row should start at the same x position
+    And every collapsed row's stacked bar should be the same width
