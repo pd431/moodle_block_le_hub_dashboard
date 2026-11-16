@@ -424,8 +424,23 @@ class behat_block_le_hub_dashboard extends behat_base {
      * @param string $name
      */
     public function there_should_be_a_hub_row(string $not, string $name): void {
-        $step = $not ? 'should_not_exist' : 'should_exist';
-        $this->execute('behat_general::' . $step, [self::row_xpath($name), 'xpath_element']);
+        if (!$this->running_javascript()) {
+            $step = $not ? 'should_not_exist' : 'should_exist';
+            $this->execute('behat_general::' . $step, [self::row_xpath($name), 'xpath_element']);
+            return;
+        }
+        // In a browser a row that Find or a filter has hidden is not there for the reader either.
+        $this->spin(function ($context) use ($not, $name) {
+            $row = $context->getSession()->getPage()->find('xpath', self::row_xpath($name));
+            $shown = $row && $row->isVisible();
+            if ($shown === (bool) $not) {
+                throw new ExpectationException(
+                    "The hub row '$name' is " . ($shown ? 'shown' : 'not shown'),
+                    $context->getSession()
+                );
+            }
+            return true;
+        });
     }
 
     /**
@@ -1416,22 +1431,6 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
-     * The first assessment row should still be visible.
-     *
-     * @Then /^the first assessment row should still be visible$/
-     */
-    public function first_row_visible(): void {
-        $visible = $this->getSession()->evaluateScript("(function () {
-            var row = document.querySelector('" . self::BLOCK . " li[data-region=\"hub-row\"]:not([hidden])');
-            var r = row.getBoundingClientRect();
-            var panel = document.querySelector('" . self::BLOCK . " [data-region=\"hub-editor\"]').getBoundingClientRect();
-            return r.left < panel.left && r.top >= 0 && r.bottom <= window.innerHeight; })()");
-        if (!$visible) {
-            throw new ExpectationException('The first row is hidden behind the editor', $this->getSession());
-        }
-    }
-
-    /**
      * The collapsed row "<name>" should be at most "<px>" pixels tall.
      *
      * @Then /^the collapsed row "(?P<name>[^"]*)" should be at most "(?P<px>\d+)" pixels tall$/
@@ -1493,18 +1492,6 @@ class behat_block_le_hub_dashboard extends behat_base {
             return {top: header.getBoundingClientRect().top, section: s.getBoundingClientRect().top}; })()");
         if ($top['top'] < 0 || $top['top'] > 80 || $top['section'] >= $top['top']) {
             throw new ExpectationException("The '$group' header is at " . $top['top'] . ' pixels', $this->getSession());
-        }
-    }
-
-    /**
-     * The view editor should open as a side panel.
-     *
-     * @Then /^the view editor should open as a side panel$/
-     */
-    public function editor_is_a_side_panel(): void {
-        $panel = $this->find('css', self::BLOCK . ' [data-region="hub-editor"]');
-        if (!$panel->isVisible()) {
-            throw new ExpectationException('The view editor is not open', $this->getSession());
         }
     }
 
@@ -1827,23 +1814,24 @@ class behat_block_le_hub_dashboard extends behat_base {
     }
 
     /**
-     * A summative "assign" "<name>" in "<course>" under "<category>" was due "<due>": the course is created there.
+     * The module "<course>" in the category "<category>" has a summative "assign" "<name>" due "<due>": the course
+     * is created there. Worded apart from My assessments' "... is due" sentence, which would also match.
      *
      * @phpcs:ignore moodle.Files.LineLength.TooLong, moodle.Files.LineLength.MaxExceeded
-     * @Given /^an? (?P<tag>summative|formative) "(?P<mod>\w+)" "(?P<name>[^"]*)" in "(?P<course>[^"]*)" under "(?P<category>[^"]*)" (?:is|was) due "(?P<due>[^"]*)"$/
+     * @Given /^the module "(?P<course>[^"]*)" in the category "(?P<category>[^"]*)" has an? (?P<tag>summative|formative) "(?P<mod>\w+)" "(?P<name>[^"]*)" due "(?P<due>[^"]*)"$/
+     * @param string $course
+     * @param string $category
      * @param string $tag
      * @param string $modname
      * @param string $name
-     * @param string $course
-     * @param string $category
      * @param string $due
      */
     public function assessment_in_category(
+        string $course,
+        string $category,
         string $tag,
         string $modname,
         string $name,
-        string $course,
-        string $category,
         string $due
     ): void {
         self::write('assessment_in_category', [$tag, $modname, $name, $course, $category, $due]);
@@ -1999,8 +1987,8 @@ class behat_block_le_hub_dashboard extends behat_base {
     public function editor_should_fill_the_window(): void {
         $fits = $this->getSession()->evaluateScript(
             "return (function () { var r = document.querySelector('" . self::BLOCK . " [data-region=\"hub-editor\"]')" .
-            ".getBoundingClientRect(); return r.left <= 1 && r.top <= 1 && r.width >= window.innerWidth - 2 && " .
-            "r.height >= window.innerHeight - 2; })();"
+            ".getBoundingClientRect(); var d = document.documentElement; return r.left <= 1 && r.top <= 1 && " .
+            "r.width >= d.clientWidth - 2 && r.height >= d.clientHeight - 2; })();"
         );
         if (!$fits) {
             throw new ExpectationException('The view editor does not fill the window', $this->getSession());

@@ -35,6 +35,16 @@ final class testing {
     }
 
     /**
+     * Whether a test has slowed the rows down, so the page must not hold Behat until they land: the test is
+     * watching the frame fill in.
+     *
+     * @return bool
+     */
+    public static function watching_rows(): bool {
+        return self::enabled() && (int)get_config('block_le_hub_dashboard', 'testslowrows') > 0;
+    }
+
+    /**
      * Holds a row fetch for the seconds a test asked for (`testslowrows`), once only when it asked for that
      * (`testslowonce`), so a Retry after the budget runs out gets through.
      */

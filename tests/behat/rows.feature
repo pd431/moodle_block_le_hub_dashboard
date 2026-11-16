@@ -44,7 +44,7 @@ Feature: A collapsed row is one line of aligned columns, and opens for the detai
   Scenario: Collapsed-row flags are icons with counts, and the words are in the popover
     Given "student1" has an extension on "Problem sheet 4" to "in 3 days"
     When I log in as "hub1" and view the "Hub dashboard"
-    Then the collapsed row "Problem sheet 4" should show the flag count "2 flags"
+    Then the collapsed row "Problem sheet 4" should show the flag count "3 flags"
     And the collapsed row "Problem sheet 4" should show the icon flags "1 individual deadline, No allocation"
     And the collapsed row "Problem sheet 4" should not show the text "individual deadline"
     When I click on the flag count of "Problem sheet 4"
@@ -155,7 +155,7 @@ Feature: A collapsed row is one line of aligned columns, and opens for the detai
     And the "Chase" group header should carry the group's colour
     And the collapsed row "Problem sheet 4" should show the reason text "Marking late"
     And the collapsed row "Problem sheet 4" should show one stacked bar with segments "Submitted 2, Marked 1, Released 1"
-    And the collapsed row "Problem sheet 4" should show the flag count "2 flags"
+    And the collapsed row "Problem sheet 4" should show the flag count "3 flags"
     And the collapsed row "Problem sheet 4" should not show any pill
     When I click on the flag count of "Problem sheet 4"
     Then I should see "1 individual deadline" in the "Hub dashboard" block

@@ -954,11 +954,8 @@
 @container ma (width < 62rem) {
     .block_le_dashboard_dashboard.le-hub .hub-colhead,
     .block_le_dashboard_dashboard.le-hub .hub-row-line {
-        --hub-columns: 2rem minmax(0, 1fr) 6.5rem 9rem 4.5rem 2rem;
-        --hub-areas: "icon name module module flags toggle" "icon status status progress progress toggle";
-    }
-    .block_le_dashboard_dashboard.le-hub .hub-col--progress {
-        max-width: 15.5rem;
+        --hub-columns: 2rem minmax(0, 1fr) 6.5rem 4.5rem 9rem 2rem;
+        --hub-areas: "icon name module flags flags toggle" "icon status status status progress toggle";
     }
     .block_le_dashboard_dashboard.le-hub .hub-colhead {
         display: none;

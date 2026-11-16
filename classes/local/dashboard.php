@@ -200,6 +200,8 @@ final class dashboard {
             'cmids' => $inline ? '' : implode(',', array_keys($list)),
             'loading' => $loading,
             'budget' => config::load_seconds(),
+            'budgettext' => get_string('budget_over', $c, count($list)),
+            'unheld' => testing::watching_rows(),
             'selectclass' => format::select_class(),
             'views' => $this->views(),
             'hasviews' => (bool)views::all($this->userid),
@@ -353,8 +355,8 @@ final class dashboard {
             $cat['checked'] = in_array($cat['id'], $view->cat);
         }
         unset($cat);
-        $picker = ['id' => \html_writer::random_id('hubcats'), 'labelledby' => '', 'categories' => $categories,
-            'hascategories' => !empty($categories)];
+        $picker = ['id' => \html_writer::random_id('hubcats'), 'label' => get_string('editor_departments', 'block_le_hub_dashboard'),
+            'categories' => $categories, 'hascategories' => !empty($categories)];
         $codes = [];
         foreach (['starts', 'contains'] as $kind) {
             foreach ($view->$kind as $text) {

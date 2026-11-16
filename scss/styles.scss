@@ -1091,12 +1091,10 @@ $hub-group-tones: (
         .hub-colhead,
         .hub-row-line {
             // Fixed tracks on the second line too (A1): the bar and the flags line up down the list.
-            --hub-columns: 2rem minmax(0, 1fr) 6.5rem 9rem 4.5rem 2rem;
-            --hub-areas: "icon name module module flags toggle" "icon status status progress progress toggle";
-        }
-
-        .hub-col--progress {
-            max-width: 15.5rem;
+            // The status sentence gets the width of the name, the module and the flags, so it stays on one line at
+            // the Dashboard's 782px; the bar keeps the 9rem it has in the one-line row.
+            --hub-columns: 2rem minmax(0, 1fr) 6.5rem 4.5rem 9rem 2rem;
+            --hub-areas: "icon name module flags flags toggle" "icon status status status progress toggle";
         }
 
         .hub-colhead {

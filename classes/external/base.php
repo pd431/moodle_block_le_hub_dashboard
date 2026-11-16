@@ -90,6 +90,7 @@ abstract class base extends external_api {
      * The rendered dashboard and its state.
      *
      * @param dashboard $dashboard
+     * @param bool $witheditor Whether to render the view editor too (L4): only once it has been opened.
      * @return array
      */
     protected static function render(dashboard $dashboard, bool $witheditor = false): array {
@@ -113,15 +114,14 @@ abstract class base extends external_api {
     protected static function render_rows(dashboard $dashboard, array $cmids): array {
         global $PAGE;
         $output = $PAGE->get_renderer('core');
-        $html = '';
-        $count = 0;
+        $items = [];
         foreach ($dashboard->groups($cmids) as $group => $rows) {
             foreach ($rows as $row) {
-                $html .= $output->render_from_template('block_le_hub_dashboard/rowitem', $row + ['group' => $group]);
-                $count++;
+                $items[] = $row + ['group' => $group];
             }
         }
-        return ['html' => $html, 'count' => $count];
+        $html = $output->render_from_template('block_le_hub_dashboard/rows', ['rows' => $items]);
+        return ['html' => $html, 'count' => count($items)];
     }
 
     /**

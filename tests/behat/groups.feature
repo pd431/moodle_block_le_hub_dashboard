@@ -45,6 +45,7 @@ Feature: Assessments are grouped by whose turn it is, with the reason as a tag
     When I click on "This view" "button" in the "Hub dashboard" "block"
     And I click on "Edit what this view shows" "link" in the "Hub dashboard" "block"
     And I set the view's allocation window to "14" days
+    And I press Escape in the view editor
     Then "Lab report" should be in the "In progress" group with the reason "Upcoming"
     And the collapsed row "Lab report" should show a "1 unallocated" flag
     When I log in as "hubhist" and view the "Hub dashboard"

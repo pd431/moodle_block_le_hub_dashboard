@@ -86,7 +86,7 @@ class setting_categories extends \admin_setting {
         $context = [
             'id' => $this->get_id(),
             'field' => $this->get_full_name(),
-            'labelledby' => $this->get_id() . 'label',
+            'label' => $this->visiblename,
             'categories' => $tree,
             'hascategories' => !empty($tree),
         ];

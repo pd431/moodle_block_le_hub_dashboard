@@ -103,8 +103,8 @@ Feature: One control bar holds the view, year, type, Find and Filter
 
   @javascript
   Scenario: Two words in Find both have to match
-    Given a summative "assign" "Problem sheet 1" in "MTH1001-2627" under "Biosciences" was due "3 days ago"
-    And a summative "assign" "Problem sheet 2" in "MTH1002-2526" under "Biosciences" was due "3 days ago"
+    Given the module "MTH1001-2627" in the category "Biosciences" has a summative "assign" "Problem sheet 1" due "3 days ago"
+    And the module "MTH1002-2526" in the category "Biosciences" has a summative "assign" "Problem sheet 2" due "3 days ago"
     When I log in as "hub1" and view the "Hub dashboard"
     And I type "MTH1 2627" in the hub "Find" box
     Then there should be a hub row "Problem sheet 1"

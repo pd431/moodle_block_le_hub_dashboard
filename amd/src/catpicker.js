@@ -27,6 +27,8 @@
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import Pending from 'core/pending';
+
 const SELECTORS = {
     picker: '[data-region="hub-catpicker"]',
     item: '[data-region="hub-tree-item"]',
@@ -78,14 +80,26 @@ class CatPicker {
         const search = root.querySelector(SELECTORS.search);
         if (search) {
             search.addEventListener('input', () => {
+                // Held as pending work, so a test that types waits for the tree to narrow.
+                if (!this.pending) {
+                    this.pending = new Pending('block_le_hub_dashboard/catpicker');
+                }
                 clearTimeout(this.timer);
-                this.timer = setTimeout(() => this.filter(search.value), DEBOUNCE);
+                this.timer = setTimeout(() => {
+                    this.filter(search.value);
+                    this.pending.resolve();
+                    this.pending = null;
+                }, DEBOUNCE);
             });
             search.addEventListener('keydown', e => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     clearTimeout(this.timer);
                     this.filter(search.value);
+                    if (this.pending) {
+                        this.pending.resolve();
+                        this.pending = null;
+                    }
                 }
             });
         }

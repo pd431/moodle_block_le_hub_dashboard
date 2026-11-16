@@ -790,6 +790,8 @@ class Hub {
      */
     pickPerson(personid) {
         this.closeSuggest();
+        // What was typed to find them is not a filter on their list.
+        this.live = '';
         this.load(`${COMPONENT}_get_view`, {personid}, '[data-action="clear-person"]');
     }
 
@@ -1384,7 +1386,9 @@ class Hub {
      */
     async fetchRows() {
         const seq = this.seq;
-        const pending = new Pending(`${COMPONENT}/rows`);
+        // A test that slows the rows down watches the frame fill in, so it must not be held until they land.
+        const held = !(this.viewRoot && this.viewRoot.dataset.unheld);
+        const pending = held ? new Pending(`${COMPONENT}/rows`) : null;
         try {
             while (this.queue.length) {
                 const batch = this.queue.slice(0, BATCH);
@@ -1415,7 +1419,9 @@ class Hub {
             this.apply();
             Notification.exception(error);
         } finally {
-            pending.resolve();
+            if (pending) {
+                pending.resolve();
+            }
         }
     }
 
@@ -1457,11 +1463,8 @@ class Hub {
         }
         box.hidden = !on;
         if (on) {
-            getString('budget_over', COMPONENT, this.total).then(text => {
-                box.querySelector(SELECTORS.budgetText).textContent = text;
-                this.say(text);
-                return text;
-            }).catch(Notification.exception);
+            // The sentence came with the frame: a server that is slow would be slow to send it too.
+            this.say(box.querySelector(SELECTORS.budgetText).textContent.trim());
         }
     }
 
@@ -1485,7 +1488,7 @@ class Hub {
     /**
      * Puts fetched rows into their groups, each in its place by sort key.
      *
-     * @param {string} html List items from the rowitem template.
+     * @param {string} html A list from the rows template.
      */
     insertRows(html) {
         const holder = document.createElement('template');

@@ -33,7 +33,7 @@ classes/local/testing      the one gate for test seams (slow rows), off unless P
 classes/admin/setting_categories   the administrator's category picker (C1)
         │
         ▼
-templates/dashboard, view, group, row, rowitem, editor, catpicker      scss/styles.scss
+templates/dashboard, view, group, row, rows, editor, catpicker      scss/styles.scss
 amd/src/hub.js (the block: loading, filters, editor)   amd/src/catpicker.js (both category trees)
 ```
 

@@ -12,7 +12,7 @@ Feature: The administrator sets the categories the hub works in
 
   Scenario: The administrator limits the hub to the categories that matter
     Given the course category "Archive 2019" exists under "Faculty of Science"
-    And a summative "assign" "Old lab" in "OLD1" under "Archive 2019" was due "400 days ago"
+    And the module "OLD1" in the category "Archive 2019" has a summative "assign" "Old lab" due "400 days ago"
     And the hub's valid categories are "Faculty of Science / Biosciences, Faculty of Science / Physics"
     When I log in as "hub1" and view the "Hub dashboard"
     Then there should be a hub row "Problem sheet 4"
