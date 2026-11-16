@@ -949,7 +949,7 @@ class behat_block_le_hub_dashboard extends behat_base {
         $parts = [trim($header->find('xpath', ".//*[contains(@class, 'hub-group-title')]")->getText()) . ' ' .
             trim($header->find('xpath', ".//*[@data-region='hub-group-count']")->getText())];
         foreach ($header->findAll('xpath', ".//button[@data-action='reason']") as $button) {
-            if ($button->isVisible()) {
+            if ($this->running_javascript() ? $button->isVisible() : !$button->hasAttribute('hidden')) {
                 $parts[] = trim(preg_replace('/\s+/', ' ', $button->getText()));
             }
         }

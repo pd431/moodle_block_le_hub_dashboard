@@ -1,4 +1,4 @@
-@block @block_le_hub_dashboard @javascript
+@block @block_le_hub_dashboard
 Feature: The hub shows its frame at once and fetches the rows afterwards
   In order to open my Dashboard without waiting for a large view
   As education support (hub) staff
@@ -13,19 +13,25 @@ Feature: The hub shows its frame at once and fetches the rows afterwards
     And "student1" has been marked on "Problem sheet 4"
     And 26 summative assessments in "MTH2003" were due "in 30 days" with marking due "in 50 days"
 
-  # L1, L2: the frame first, then the rows in batches. A view of one batch or fewer comes with the page.
-  Scenario: The Dashboard page arrives before the hub's rows do
-    Given the hub's rows take "3" seconds to load
+  # L1: the page comes with the frame and no rows. Read without a browser, so nothing has fetched them yet.
+  Scenario: The Dashboard page arrives with the hub's frame, before its rows
     When I log in as "hub1" and view my dashboard
     Then I should see "Hub dashboard" in the "Hub dashboard" block
     And the "Chase" group header should read "Chase …"
-    And I should see "My assessments" in the "My assessments" block
-    When the hub has finished loading
-    Then the "Chase" group header should read "Chase 1 · Marking late 1"
+    And there should not be a hub row "Problem sheet 4"
+
+  # L2: then the rows, in batches. A view of one batch or fewer comes with the page.
+  @javascript
+  Scenario: The hub's rows come in behind the frame
+    When I log in as "hub1" and view my dashboard
+    And the hub has finished loading
+    Then I should see "My assessments" in the "My assessments" block
+    And the "Chase" group header should read "Chase 1 · Marking late 1"
     And there should be a hub row "Problem sheet 4"
     And the "Done" group should be collapsed
 
   # L3: the time budget
+  @javascript
   Scenario: A batch that runs past the budget says so and can be retried
     Given the hub's load budget is "2" seconds
     And the hub's rows take "5" seconds to load
@@ -39,6 +45,7 @@ Feature: The hub shows its frame at once and fetches the rows afterwards
     And there should be a hub row "Problem sheet 5"
 
   # L4: the tree is fetched when the editor opens
+  @javascript
   Scenario: The department tree is not in the page until the editor opens
     When I log in as "hub1" and view the "Hub dashboard"
     Then the page should not contain the department tree
